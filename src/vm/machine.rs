@@ -1,4 +1,4 @@
-use crate::sun_lib::{include::Include, io::IO, math::Math};
+use crate::sun_lib::{include::Include, io::IO, math::Math, op::Op, sys::Sys};
 use crate::utils::err::SunError;
 use crate::vm::value::{SunFunc, SunValue};
 use crate::{parser::parser::ParseProto, vm::command::Command};
@@ -15,22 +15,18 @@ pub struct VirtualMachine {
 
 impl VirtualMachine {
     pub fn new(is_debug: bool) -> Self {
-        let mut value_map = HashMap::new();
-        IO::include(&mut value_map);
-        Math::include(&mut value_map);
-        VirtualMachine {
+        let mut vm = VirtualMachine {
             stack: Vec::new(),
             call_stack: Vec::new(),
-            value_map,
+            value_map: HashMap::new(),
             is_debug,
-        }
+        };
+        vm.preclude();
+        vm
     }
 
     pub fn run<T: Read>(&mut self, proto: &ParseProto<T>) {
         for (index, command) in proto.commands.iter().enumerate() {
-            if self.is_debug == true {
-                println!("index: {index}, command: {command:?}");
-            }
             match &command {
                 Command::LoadValue(name) => {
                     let value = self
@@ -71,7 +67,7 @@ impl VirtualMachine {
                                     index as u64
                                 )
                             );
-                            process::exit(-1);
+                            process::exit(0);
                         }
                     }
                 }
@@ -89,9 +85,21 @@ impl VirtualMachine {
                     }
                     _ => panic!("TODO: assign tensor error"),
                 },
-                Command::Call => match self.call_stack.pop() {
+                Command::Call(n) => match self.call_stack.pop() {
                     Some(f) => {
-                        f(self);
+                        let nn = f(self);
+                        if nn != *n {
+                            eprintln!(
+                                "{}",
+                                SunError::ParaError(
+                                    format!(
+                                        "called function needs `{nn}` parameters, but provide `{n}`"
+                                    ),
+                                    index as u64
+                                )
+                            );
+                            process::exit(0)
+                        }
                     }
                     None => {
                         eprintln!(
@@ -101,11 +109,30 @@ impl VirtualMachine {
                                 index as u64
                             )
                         );
-                        process::exit(-1);
+                        process::exit(0);
                     }
                 },
             }
+            if self.is_debug == true {
+                println!();
+                println!("--- index ---");
+                println!("{index}");
+                println!("--- command ---");
+                println!("command: {command:?}");
+                println!("--- stack ---");
+                println!("{:?}", self.stack);
+                println!("--- value_map ---");
+                println!("{:#?}", self.value_map);
+                println!();
+            }
         }
+    }
+
+    fn preclude(&mut self) {
+        IO::include(&mut self.value_map);
+        Sys::include(&mut self.value_map);
+        Math::include(&mut self.value_map);
+        Op::include(&mut self.value_map);
     }
 
     pub fn pop(&mut self) -> Option<SunValue> {

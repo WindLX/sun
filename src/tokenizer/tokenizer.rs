@@ -13,24 +13,26 @@ use std::{
     ahead: Token 存储向前seek一个Token的结果，用以语法分析
 */
 #[derive(Debug)]
-pub struct Tokenizer<T: Read> {
-    input: Peekable<Bytes<T>>,
+pub struct Tokenizer<R: Read> {
+    input: Peekable<Bytes<R>>,
     ahead: Token,
     line_num: u64,
+    check: bool,
 }
 
-impl<T: Read> Tokenizer<T> {
+impl<R: Read> Tokenizer<R> {
     /*
         Tokenizer 的构造函数
         para:
             input: File sun文件 / sun命令
             ahead: 初始值为 Token::EOS
     */
-    pub fn new(input: T) -> Self {
+    pub fn new(input: R, check: bool) -> Self {
         Tokenizer {
             input: input.bytes().peekable(),
             ahead: Token::Eos,
             line_num: 1,
+            check,
         }
     }
 
@@ -48,7 +50,7 @@ impl<T: Read> Tokenizer<T> {
         match self.input.peek() {
             Some(Ok(byte)) => Ok(*byte),
             Some(_) => Err(SunError::TokenizerError(
-                "peek byte failed!".to_string(),
+                "failed to peek byte".to_string(),
                 self.line_num,
             )),
             None => Ok(b'\0'),
@@ -137,12 +139,12 @@ impl<T: Read> Tokenizer<T> {
         // check if another .
         let fch = self.peek_byte()?;
         if (fch as char).is_alphabetic() {
-            return Err(SunError::InvalidNumberError(
+            return Err(SunError::NumberError(
                 "alphabetic in number".to_string(),
                 self.line_num,
             ));
         } else if fch == b'.' {
-            return Err(SunError::InvalidNumberError(
+            return Err(SunError::NumberError(
                 "more than one `.` in number".to_string(),
                 self.line_num,
             ));
@@ -164,7 +166,7 @@ impl<T: Read> Tokenizer<T> {
         loop {
             let ch = self.peek_byte()?;
             if ch == b'.' {
-                return Err(SunError::InvalidNumberError(
+                return Err(SunError::NumberError(
                     "more than one `.` in number".to_string(),
                     self.line_num,
                 ));
@@ -209,6 +211,7 @@ impl<T: Read> Tokenizer<T> {
                 }
                 b'\r' | b'\t' | b' ' => Ok(self.read_token()),
                 b'+' => Ok(Token::Add),
+                b'-' => Ok(Token::Sub),
                 b'*' => Ok(Token::Mul),
                 b'%' => Ok(Token::Mod),
                 b'^' => Ok(Token::Pow),
@@ -241,8 +244,8 @@ impl<T: Read> Tokenizer<T> {
                 b'0'..=b'9' => self.read_number(ch),
                 b'A'..=b'Z' | b'a'..=b'z' | b'_' => self.read_name(ch),
                 b'\0' => Ok(Token::Eos),
-                byte => Err(SunError::InvalidSymbolError(
-                    format!("invalid char {}", byte).to_string(),
+                byte => Err(SunError::SymbolError(
+                    format!("invalid char {}", byte as char).to_string(),
                     self.line_num,
                 )),
             };
@@ -250,7 +253,7 @@ impl<T: Read> Tokenizer<T> {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("{e}");
-                    process::exit(-1)
+                    process::exit(0)
                 }
             }
         } else {
@@ -262,30 +265,38 @@ impl<T: Read> Tokenizer<T> {
 /*
     Tokenizer 的迭代器
 */
-impl<T: Read> Iterator for Tokenizer<T> {
+impl<R: Read> Iterator for Tokenizer<R> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.ahead == Token::Eos {
             match self.read_token() {
                 Token::Eos => None,
-                t => Some(t),
+                t => {
+                    if self.check == true {
+                        println!("<token: {t:?}> ");
+                    }
+                    Some(t)
+                }
             }
         } else {
+            if self.check == true {
+                println!("<token: {:?}> ", self.ahead);
+            }
             Some(replace(&mut self.ahead, Token::Eos))
         }
     }
 }
 
 /*
-    Tokenizer 的peek方法
+    Tokenizer 的一些工具方法
 */
-impl<T: Read> Tokenizer<T> {
-    pub fn peek(&mut self) -> Option<&Token> {
+impl<R: Read> Tokenizer<R> {
+    pub fn peek(&mut self) -> &Token {
         if self.ahead == Token::Eos {
             self.ahead = self.read_token();
         }
-        Some(&self.ahead)
+        &self.ahead
     }
 
     pub fn line(&self) -> u64 {
@@ -302,9 +313,9 @@ mod tests {
 
     #[test]
     fn test_token_1() {
-        let mut tokenizer = Tokenizer::new(File::open("test/file/1.sun").unwrap());
+        let mut tokenizer = Tokenizer::new(File::open("test/file/1.sun").unwrap(), false);
         assert_eq!(tokenizer.next(), Some(Token::Name("print".to_string())));
-        assert_eq!(tokenizer.peek(), Some(&Token::ParL));
+        assert_eq!(tokenizer.peek(), &Token::ParL);
         tokenizer.next();
         assert_eq!(tokenizer.next(), Some(Token::Number(10.2)));
         assert_eq!(tokenizer.next(), Some(Token::ParR));

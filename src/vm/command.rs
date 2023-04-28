@@ -63,6 +63,8 @@ pub enum Command {
 
     /*
         调用函数
+        para:
+            para_0: u8 参数个数
     */
-    Call,
+    Call(u8),
 }

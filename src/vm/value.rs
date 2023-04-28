@@ -14,7 +14,7 @@ pub enum SunValue {
     Function(SunFunc),
 }
 
-pub type SunFunc = fn(&mut VirtualMachine);
+pub type SunFunc = fn(&mut VirtualMachine) -> u8;
 
 impl fmt::Debug for SunValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

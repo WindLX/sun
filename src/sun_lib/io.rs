@@ -5,9 +5,10 @@ use std::collections::HashMap;
 
 pub struct IO;
 
-fn print(state: &mut VirtualMachine) {
+fn print(state: &mut VirtualMachine) -> u8 {
     let value = state.pop();
-    println!("{}", value.unwrap_or(SunValue::Nil));
+    println!("  {}", value.unwrap_or(SunValue::Nil));
+    1
 }
 
 impl Include for IO {
