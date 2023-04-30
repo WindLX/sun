@@ -1,8 +1,8 @@
 use crate::parser::expr::{trans, Expr};
+use crate::sun_lib::sun_value::SunValue;
 use crate::tokenizer::{token::Token, tokenizer::Tokenizer};
 use crate::utils::err::SunError;
 use crate::vm::command::Command;
-use crate::vm::value::SunValue;
 use std::io::Read;
 use std::process;
 
@@ -11,14 +11,16 @@ pub struct ParseProto<T: Read> {
     pub commands: Vec<Command>,
     tokenizer: Tokenizer<T>,
     check: bool,
+    check_command: bool,
 }
 
 impl<T: Read> ParseProto<T> {
-    pub fn new(input: T, check_tokenizer: bool, check_parser: bool) -> Self {
+    pub fn new(input: T, check_tokenizer: bool, check_parser: bool, check_command: bool) -> Self {
         let mut proto = ParseProto {
             commands: Vec::new(),
             tokenizer: Tokenizer::new(input, check_tokenizer),
             check: check_parser,
+            check_command: check_command,
         };
         proto.load();
         proto
@@ -30,7 +32,7 @@ impl<T: Read> ParseProto<T> {
             if self.check {
                 println!("{ast:#?}");
             }
-            self.commands.append(&mut trans(ast));
+            self.commands.append(&mut trans(ast, self.check_command));
             if let &Token::Eos = self.tokenizer.peek() {
                 break;
             }
@@ -119,73 +121,171 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // neg not
+    // neg not conj
     fn parse_3(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Sub => {
                 self.tokenizer.next();
-                Box::new(Expr::Neg(self.parse_func()))
+                Box::new(Expr::Neg(self.parse_4()))
             }
             &Token::Not => {
                 self.tokenizer.next();
-                Box::new(Expr::Not(self.parse_func()))
+                Box::new(Expr::Not(self.parse_4()))
             }
-            _ => self.parse_func(),
+            &Token::Mul => {
+                self.tokenizer.next();
+                Box::new(Expr::Conj(self.parse_4()))
+            }
+            _ => self.parse_4(),
         }
     }
 
-    fn parse_func(&mut self) -> Box<Expr> {
+    // fac
+    fn parse_4(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::Fac => {
+                self.tokenizer.next();
+                Box::new(Expr::Fac(self.parse_5()))
+            }
+            _ => self.parse_5(),
+        }
+    }
+
+    // function call and assign
+    fn parse_5(&mut self) -> Box<Expr> {
+        let name = self.parse_6();
+        match self.tokenizer.peek() {
+            &Token::ParL => {
+                let mut args = Vec::new();
+                self.tokenizer.next();
+                if self.tokenizer.peek() != &Token::ParR {
+                    args.push(self.parse_expr());
+                    while self.tokenizer.peek() == &Token::Comma {
+                        self.tokenizer.next();
+                        args.push(self.parse_expr());
+                    }
+                }
+                self.expect(Token::ParR);
+                Box::new(Expr::Call(name, args))
+            }
+            &Token::Assign => {
+                self.tokenizer.next();
+                match *name {
+                    Expr::Variable(n) => Box::new(Expr::Assign(n, self.parse_expr())),
+                    d @ (Expr::Dot(_, _) | Expr::Index(_, _)) => {
+                        Box::new(Expr::TableAssign(Box::new(d), self.parse_expr()))
+                    }
+                    _ => {
+                        eprintln!(
+                            "{}",
+                            SunError::AssignError(
+                                format!("invalid assigment statement"),
+                                self.tokenizer.line() as u64
+                            )
+                        );
+                        process::exit(0);
+                    }
+                }
+            }
+            _ => name,
+        }
+    }
+
+    // dot index
+    fn parse_6(&mut self) -> Box<Expr> {
+        let mut left = self.parse_7();
+        loop {
+            match self.tokenizer.peek() {
+                &Token::Dot => {
+                    self.tokenizer.next();
+                    let right = self.parse_string();
+                    left = Box::new(Expr::Dot(left, right));
+                }
+                &Token::SquL => {
+                    self.tokenizer.next();
+                    let right;
+                    if self.tokenizer.peek() != &Token::SquR {
+                        right = self.parse_expr();
+                    } else {
+                        right = Box::new(Expr::Constant(SunValue::from(0.0)));
+                    }
+                    self.expect(Token::SquR);
+                    left = Box::new(Expr::Index(left, right));
+                }
+                _ => break,
+            }
+        }
+        left
+    }
+
+    // name
+    fn parse_7(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Name(ref name) => {
-                let mut args = Vec::new();
                 let name = name.clone();
                 self.tokenizer.next();
-                match self.tokenizer.peek() {
-                    &Token::ParL => {
-                        self.tokenizer.next();
-                        if self.tokenizer.peek() != &Token::ParR {
-                            args.push(self.parse_expr());
-                            while self.tokenizer.peek() == &Token::Comma {
-                                self.tokenizer.next();
-                                args.push(self.parse_expr());
-                            }
-                        }
-                        self.expect(Token::ParR);
-                        Box::new(Expr::Call(name, args))
-                    }
-                    &Token::Assign => {
-                        self.tokenizer.next();
-                        Box::new(Expr::Assign(name, self.parse_expr()))
-                    }
-                    _ => Box::new(Expr::Variable(name)),
-                }
+                Box::new(Expr::Variable(name))
+            }
+            _ => self.parse_primary(),
+        }
+    }
+
+    // string
+    fn parse_string(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::Name(ref name) => {
+                let name = name.clone();
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::from(name)))
             }
             _ => self.parse_primary(),
         }
     }
 
     fn parse_primary(&mut self) -> Box<Expr> {
-        match self.tokenizer.next() {
-            Some(Token::Number(value)) => Box::new(Expr::Constant(SunValue::Number(value))),
-            Some(Token::ParL) => {
+        match self.tokenizer.peek() {
+            &Token::Number(ref value) => {
+                let value = value.clone();
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::from(value)))
+            }
+            &Token::String(ref value) => {
+                let value = value.clone();
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::from(value)))
+            }
+            &Token::True => {
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::from(true)))
+            }
+            &Token::False => {
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::from(false)))
+            }
+            &Token::Nil => {
+                self.tokenizer.next();
+                Box::new(Expr::Constant(SunValue::Nil))
+            }
+            &Token::ParL => {
+                self.tokenizer.next();
                 let expr = self.parse_expr();
                 self.expect(Token::ParR);
                 expr
             }
-            Some(other) => {
-                eprintln!(
-                    "{}",
-                    SunError::SymbolError(
-                        format!("unexpected token `{other:?}`",),
-                        self.tokenizer.line()
-                    )
-                );
-                process::exit(0);
-            }
-            None => {
+            &Token::Eos => {
                 eprintln!(
                     "{}",
                     SunError::SymbolError(format!("incomplete statement",), self.tokenizer.line())
+                );
+                process::exit(0);
+            }
+            other => {
+                eprintln!(
+                    "{}",
+                    SunError::SymbolError(
+                        format!("unexpected token `{:?}`", other.clone()),
+                        self.tokenizer.line()
+                    )
                 );
                 process::exit(0);
             }

@@ -3,5 +3,21 @@
 version = 3
 
 [[package]]
+name = "colorized"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739281952453521b532f476b5f8b77c4b16d5ab2a248466c8dc153b3f85d6564"
+
+[[package]]
+name = "serde"
+version = "1.0.160"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb2f3770c8bce3bcda7e149193a069a0f4365bda1fa5cd88e03bca26afc1216c"
+
+[[package]]
 name = "sun"
 version = "0.1.0"
+dependencies = [
+ "colorized",
+ "serde",
+]

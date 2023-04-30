@@ -44,6 +44,9 @@ pub enum Token {
     // name
     Name(String),
 
+    // string
+    String(String),
+
     // end
     Eos,
 }

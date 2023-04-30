@@ -183,6 +183,35 @@ impl<R: Read> Tokenizer<R> {
     }
 
     /*
+        获取下一个字符串
+        para:
+            quote: char 字符串的开始符
+        return:
+            Token: 字符串Token
+    */
+    fn read_string(&mut self, quote: u8) -> Result<Token, SunError> {
+        let mut s = String::new();
+        loop {
+            match self.read_byte().ok_or(SunError::TokenizerError(
+                "read char failed".to_string(),
+                self.line(),
+            ))? {
+                b'\n' => {
+                    return Err(SunError::SymbolError(
+                        "unfinished string".to_string(),
+                        self.line(),
+                    ))
+                }
+                ch if ch == quote => break,
+                ch => {
+                    s.push(ch as char);
+                }
+            }
+        }
+        Ok(Token::String(s))
+    }
+
+    /*
         跳过注释
     */
     fn read_comment(&mut self) {
@@ -241,6 +270,7 @@ impl<R: Read> Tokenizer<R> {
                     Ok(_) => Ok(Token::Div),
                     Err(e) => Err(e),
                 },
+                b'\'' | b'"' => self.read_string(ch),
                 b'0'..=b'9' => self.read_number(ch),
                 b'A'..=b'Z' | b'a'..=b'z' | b'_' => self.read_name(ch),
                 b'\0' => Ok(Token::Eos),

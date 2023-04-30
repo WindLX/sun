@@ -2,8 +2,9 @@ use crate::parser::parser::ParseProto;
 use crate::utils::config::Config;
 use crate::utils::err::SunError;
 use crate::vm::machine::VirtualMachine;
+use colorized::*;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Write};
 use std::process;
 use std::{env, io};
 
@@ -13,8 +14,11 @@ use std::{env, io};
 pub fn run() {
     let (args, config) = get_config();
     let mut vm = VirtualMachine::new(config.is_debug);
+    // preclude(&mut vm);
     match args.len() {
         1 => loop {
+            print!("{}", "[i] ".color(Colors::BrightGreenFg));
+            io::stdout().flush().expect("failed to flush stdout");
             let mut buf = String::new();
             match io::stdin().read_line(&mut buf) {
                 Ok(_) => {
@@ -23,6 +27,7 @@ pub fn run() {
                         buf,
                         config.check_tokenizer,
                         config.check_parser,
+                        config.check_command,
                     ));
                 }
                 Err(e) => {
@@ -36,6 +41,7 @@ pub fn run() {
                 BufReader::new(f),
                 config.check_tokenizer,
                 config.check_parser,
+                config.check_command,
             )),
             Err(_) => {
                 eprintln!(
@@ -69,5 +75,27 @@ fn get_config() -> (Vec<String>, Config) {
         args.remove(idx);
         config.check_parser = true;
     }
+    if let Some(idx) = args.iter().position(|a| a == "--cc") {
+        args.remove(idx);
+        config.check_command = true;
+    }
     (args, config)
 }
+
+/*
+    预加载，在虚拟机运行前加载的sun代码
+    para:
+        vm: &VirtualMachine
+*/
+// fn preclude(vm: &mut VirtualMachine) {
+//     match File::open("./preclude/preclude.sun") {
+//         Ok(f) => vm.run(&ParseProto::new(BufReader::new(f), false, false, false)),
+//         Err(_) => {
+//             eprintln!(
+//                 "{}",
+//                 SunError::InputError("failed to find preclude file".to_string())
+//             );
+//             process::exit(0);
+//         }
+//     }
+// }

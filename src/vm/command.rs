@@ -1,4 +1,4 @@
-use crate::vm::value::SunValue;
+use crate::sun_lib::sun_value::SunValue;
 
 /*
     Sun 虚拟机的指令集
@@ -27,39 +27,26 @@ pub enum Command {
     AddValue(SunValue),
 
     /*
-        向全局变量表插入值
-        para:
-            para_0: String 变量名
-            para_1: SunValue 变量值
+        按索引查询Table，将结果加载到栈上
     */
-    SetValue(String, SunValue),
+    LoadTableValueByIndex,
 
     /*
-        复制全局变量表值至另一个值
-        para:
-            para_0: String 被复制的键
-            para_1: String 目标键
+        按键查询Table，将结果加载到栈上
     */
-    CopyValue(String, String),
+    LoadTableValueByKey,
 
     /*
-        从全局变量表加载函数到栈上
+        按TableIndex为Table赋值
+    */
+    SetTableValue,
+
+    /*
+        从全局变量表加载函数到调用栈上
         para:
             para_0: String 函数名
     */
     LoadFunc(String),
-
-    /*
-        创建Tensor
-    */
-    CreateTensor,
-
-    /*
-        为Tensor指定索引值赋值
-        para:
-            para_0: u8 Tensor的索引值
-    */
-    SetTensor(u8),
 
     /*
         调用函数
