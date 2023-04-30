@@ -37,7 +37,7 @@ impl VirtualMachine {
                             self.stack.push(SunValue::from(value));
                         }
                         SunValue::Pointer(p) => self.stack.push(SunValue::from(p.clone())),
-                        SunValue::Nil => self.stack.push(SunValue::from(name.as_str())),
+                        // SunValue::Nil => self.stack.push(SunValue::from(name.as_str())),
                         _ => {
                             let value = value.clone();
                             self.stack.push(value);
