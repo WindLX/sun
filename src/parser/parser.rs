@@ -209,7 +209,7 @@ impl<T: Read> ParseProto<T> {
                         }
                         _ => {
                             let e = SunError::AttributeError(format!(
-                                "invalid get-attribute statement at line {}",
+                                "invalid get attribute statement because of invalid token at line {}",
                                 self.tokenizer.line()
                             ));
                             error_output(e)
@@ -266,29 +266,17 @@ impl<T: Read> ParseProto<T> {
                 }
                 self.expect(Token::CurR);
                 Box::new(Expr::TableCreate(args))
-                // match *name.clone() {
-                //     Expr::Assign(_, _) | Expr::TableAssign(_, _) => {
-                //         Box::new(Expr::TableCreate(args))
-                //     }
-                //     _ => {
-                //         let e = SunError::AssignError(format!(
-                //             "invalid table-create statement at line {}",
-                //             self.tokenizer.line()
-                //         ));
-                //         error_output(e)
-                //     }
-                // }
             }
             _ => self.parse_primary(),
         }
     }
 
     fn parse_pair(&mut self) -> Box<Expr> {
-        let left = self.parse_7();
+        let left = self.parse_expr();
         match self.tokenizer.peek() {
             &Token::Colon => {
                 self.tokenizer.next();
-                let right = self.parse_7();
+                let right = self.parse_expr();
                 match *left {
                     Expr::Constant(key) => match key {
                         SunValue::String(key) => Box::new(Expr::PairCreate(key, right)),

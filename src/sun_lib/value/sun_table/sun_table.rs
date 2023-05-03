@@ -68,6 +68,21 @@ impl Table {
     pub fn extend_array(&mut self, other: Table) {
         self.array.extend(other.array)
     }
+
+    pub fn alen(&self) -> SunPointer {
+        let n = self.array.len();
+        SunPointer::new(SunValue::from(n as f64))
+    }
+
+    pub fn dlen(&self) -> SunPointer {
+        let n = self.dict.len();
+        SunPointer::new(SunValue::from(n as f64))
+    }
+
+    pub fn len(&self) -> SunPointer {
+        let n = self.dict.len() + self.array.len();
+        SunPointer::new(SunValue::from(n as f64))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -89,12 +104,21 @@ impl SunTable {
         obj.set_method("push", push());
         obj.set_method("insert", insert());
         obj.set_method("extend", extend());
+        obj.set_method("alen", alen());
+        obj.set_method("dlen", dlen());
+        obj.set_method("len", len());
         SunTable { obj }
     }
 }
 
 fn remove() -> Function {
     let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
         let p = args.remove(0);
         let mut res = Vec::new();
         let mut t = p.borrow_mut();
@@ -141,6 +165,12 @@ fn remove() -> Function {
 
 fn push() -> Function {
     let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
         let p = args.remove(0);
         let mut t = p.borrow_mut();
         if let SunValue::Table(t) = &mut *t {
@@ -156,6 +186,12 @@ fn push() -> Function {
 
 fn insert() -> Function {
     let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 2 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
         let p = args.remove(0);
         let mut t = p.borrow_mut();
         if let SunValue::Table(t) = &mut *t {
@@ -182,6 +218,12 @@ fn insert() -> Function {
 
 fn extend() -> Function {
     let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
         let p = args.remove(0);
         let mut t = p.borrow_mut();
         if let SunValue::Table(t) = &mut *t {
@@ -197,6 +239,66 @@ fn extend() -> Function {
             }
         }
         vec![]
+    };
+    f
+}
+
+fn alen() -> Function {
+    let f = |args: Vec<SunPointer>| {
+        if args.len() < 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args[0].get();
+        match p {
+            SunValue::Table(t) => vec![t.alen()],
+            other => {
+                let e = SunError::ParaError(format!("expect `table` but got `{other}`"));
+                error_output(e);
+            }
+        }
+    };
+    f
+}
+
+fn dlen() -> Function {
+    let f = |args: Vec<SunPointer>| {
+        if args.len() < 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args[0].get();
+        match p {
+            SunValue::Table(t) => vec![t.dlen()],
+            other => {
+                let e = SunError::ParaError(format!("expect `table` but got `{other}`"));
+                error_output(e);
+            }
+        }
+    };
+    f
+}
+
+fn len() -> Function {
+    let f = |args: Vec<SunPointer>| {
+        if args.len() < 1 {
+            {
+                let e = SunError::CallError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args[0].get();
+        match p {
+            SunValue::Table(t) => vec![t.len()],
+            other => {
+                let e = SunError::ParaError(format!("expect `table` but got `{other}`"));
+                error_output(e);
+            }
+        }
     };
     f
 }
@@ -244,15 +346,25 @@ impl IndexAble for SunTable {
 impl fmt::Display for Table {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f)?;
-        writeln!(f, "Array:")?;
+        writeln!(
+            f,
+            "{}: {}",
+            "Array".color(Colors::YellowFg),
+            self.array.len()
+        )?;
         write!(f, "{:<10} {:<10}\n", "Index", "Value")?;
         for (i, item) in self.array.iter().enumerate() {
             write!(f, "{:<10} {:<10?}\n", i, item)?;
         }
-        writeln!(f, "Dict:")?;
+        writeln!(
+            f,
+            "{}:  {}",
+            "Dict".color(Colors::YellowFg),
+            self.array.len()
+        )?;
         write!(f, "{:<10} {:<10}\n", "Key", "Value")?;
         for (key, value) in self.dict.iter() {
-            write!(f, "{:<15} {:<10?}\n", key, value)?;
+            write!(f, "{:<10} {:<10?}\n", key, value)?;
         }
 
         Ok(())
