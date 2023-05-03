@@ -1,10 +1,12 @@
 use crate::tokenizer::token::Token;
-use crate::utils::err::SunError;
+use crate::utils::{
+    err::SunError,
+    log::{debug_output, error_output},
+};
 use std::{
     io::{Bytes, Read},
     iter::Peekable,
     mem::replace,
-    process,
 };
 
 /*
@@ -49,10 +51,10 @@ impl<R: Read> Tokenizer<R> {
     fn peek_byte(&mut self) -> Result<u8, SunError> {
         match self.input.peek() {
             Some(Ok(byte)) => Ok(*byte),
-            Some(_) => Err(SunError::TokenizerError(
-                "failed to peek byte".to_string(),
-                self.line_num,
-            )),
+            Some(_) => Err(SunError::TokenizerError(format!(
+                "failed to peek byte at line {}",
+                self.line_num
+            ))),
             None => Ok(b'\0'),
         }
     }
@@ -139,15 +141,15 @@ impl<R: Read> Tokenizer<R> {
         // check if another .
         let fch = self.peek_byte()?;
         if (fch as char).is_alphabetic() {
-            return Err(SunError::NumberError(
-                "alphabetic in number".to_string(),
-                self.line_num,
-            ));
+            return Err(SunError::NumberError(format!(
+                "alphabetic in number at line {}",
+                self.line_num
+            )));
         } else if fch == b'.' {
-            return Err(SunError::NumberError(
-                "more than one `.` in number".to_string(),
-                self.line_num,
-            ));
+            return Err(SunError::NumberError(format!(
+                "more than one `.` in number at line {}",
+                self.line_num
+            )));
         }
 
         Ok(Token::Number(n as f64))
@@ -166,10 +168,10 @@ impl<R: Read> Tokenizer<R> {
         loop {
             let ch = self.peek_byte()?;
             if ch == b'.' {
-                return Err(SunError::NumberError(
-                    "more than one `.` in number".to_string(),
-                    self.line_num,
-                ));
+                return Err(SunError::NumberError(format!(
+                    "more than one `.` in number at line {}",
+                    self.line_num
+                )));
             }
             if let Some(d) = char::to_digit(ch as char, 10) {
                 n = n * 10 + d as i64;
@@ -192,15 +194,15 @@ impl<R: Read> Tokenizer<R> {
     fn read_string(&mut self, quote: u8) -> Result<Token, SunError> {
         let mut s = String::new();
         loop {
-            match self.read_byte().ok_or(SunError::TokenizerError(
-                "read char failed".to_string(),
-                self.line(),
-            ))? {
+            match self.read_byte().ok_or(SunError::TokenizerError(format!(
+                "read char failed at line {}",
+                self.line()
+            )))? {
                 b'\n' => {
-                    return Err(SunError::SymbolError(
-                        "unfinished string".to_string(),
-                        self.line(),
-                    ))
+                    return Err(SunError::SymbolError(format!(
+                        "unfinished string at line {}",
+                        self.line()
+                    )))
                 }
                 ch if ch == quote => break,
                 ch => {
@@ -274,17 +276,14 @@ impl<R: Read> Tokenizer<R> {
                 b'0'..=b'9' => self.read_number(ch),
                 b'A'..=b'Z' | b'a'..=b'z' | b'_' => self.read_name(ch),
                 b'\0' => Ok(Token::Eos),
-                byte => Err(SunError::SymbolError(
-                    format!("invalid char {}", byte as char).to_string(),
-                    self.line_num,
-                )),
+                byte => Err(SunError::SymbolError(format!(
+                    "invalid char {} at line {}",
+                    byte as char, self.line_num
+                ))),
             };
             match res {
                 Ok(r) => r,
-                Err(e) => {
-                    eprintln!("{e}");
-                    process::exit(0)
-                }
+                Err(e) => error_output(e),
             }
         } else {
             Token::Eos
@@ -304,14 +303,14 @@ impl<R: Read> Iterator for Tokenizer<R> {
                 Token::Eos => None,
                 t => {
                     if self.check == true {
-                        println!("<token: {t:?}> ");
+                        debug_output(&t, false);
                     }
                     Some(t)
                 }
             }
         } else {
             if self.check == true {
-                println!("<token: {:?}> ", self.ahead);
+                debug_output(&self.ahead, false);
             }
             Some(replace(&mut self.ahead, Token::Eos))
         }

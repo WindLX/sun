@@ -1,13 +1,14 @@
-use crate::sun_lib::sun_value::SunValue;
+use crate::sun_lib::value::sun_object::SunValue;
+use crate::utils::log::debug_output;
 use crate::vm::command::Command;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Add(Box<Expr>, Box<Expr>),   // 0
     Sub(Box<Expr>, Box<Expr>),   // 0
     Mul(Box<Expr>, Box<Expr>),   // 1
     Div(Box<Expr>, Box<Expr>),   // 1
-    Mod(Box<Expr>, Box<Expr>),   // 1
+    Rem(Box<Expr>, Box<Expr>),   // 1
     Pow(Box<Expr>, Box<Expr>),   // 2
     Neg(Box<Expr>),              // 3
     Fac(Box<Expr>),              // 4
@@ -20,7 +21,10 @@ pub enum Expr {
     Index(Box<Expr>, Box<Expr>), // 6
     Assign(String, Box<Expr>),
     TableAssign(Box<Expr>, Box<Expr>),
-    Call(Box<Expr>, Vec<Box<Expr>>), // 5
+    TableCreate(Vec<Box<Expr>>),
+    PairCreate(String, Box<Expr>),
+    Call(Box<Expr>, Vec<Box<Expr>>),    // 5
+    DotCall(Box<Expr>, Vec<Box<Expr>>), // 5
     Constant(SunValue),
     Variable(String),
 }
@@ -33,6 +37,8 @@ pub enum Desc {
     Index,
     Assign(String),
     TableAssign,
+    TableCreate(u8),
+    PairCreate(String),
     Call(u8),
     Constant(SunValue),
     Variable(String),
@@ -46,26 +52,31 @@ pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
         match desc {
             Desc::Single(f) => {
                 commands.push(Command::Call(1));
-                commands.push(Command::LoadFunc(f));
+                commands.push(Command::LoadMethod(f));
             }
             Desc::Double(f) => {
                 commands.push(Command::Call(2));
-                commands.push(Command::LoadFunc(f));
+                commands.push(Command::LoadMethod(f));
             }
             Desc::Call(n) => {
                 commands.push(Command::Call(n));
             }
-            Desc::Dot => commands.push(Command::LoadTableValueByKey),
-            Desc::Index => commands.push(Command::LoadTableValueByIndex),
+            Desc::Dot => commands.push(Command::LoadMethod("dot".to_string())),
+            Desc::Index => {
+                commands.push(Command::Call(2));
+                commands.push(Command::LoadMethod("index".to_string()));
+            }
             Desc::Variable(v) => commands.push(Command::LoadValue(v)),
-            Desc::Constant(c) => commands.push(Command::AddValue(c)),
-            Desc::Assign(n) => commands.push(Command::SetGlobalValue(n)),
-            Desc::TableAssign => commands.push(Command::SetTableValue),
+            Desc::Constant(c) => commands.push(Command::LoadConst(c)),
+            Desc::Assign(n) => commands.push(Command::StoreGlobal(n)),
+            Desc::TableAssign => commands.push(Command::SetTable),
+            Desc::TableCreate(n) => commands.push(Command::CreateTable(n)),
+            Desc::PairCreate(k) => commands.push(Command::SetPair(k)),
         }
     }
     commands.reverse();
     if check == true {
-        println!("{:?}", commands);
+        debug_output(&commands, false);
     }
     commands
 }
@@ -92,8 +103,8 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
         }
-        Expr::Mod(left, right) => {
-            expr_stack.push(Desc::Double("mod".to_string()));
+        Expr::Rem(left, right) => {
+            expr_stack.push(Desc::Double("rem".to_string()));
             traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
         }
@@ -146,15 +157,15 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
         Expr::Constant(value) => {
             expr_stack.push(Desc::Constant(value.clone()));
         }
-        Expr::Variable(name) => expr_stack.push(Desc::Variable(name.to_string())),
+        Expr::Variable(name) => expr_stack.push(Desc::Variable(name.to_owned())),
         Expr::Assign(name, expr) => {
-            expr_stack.push(Desc::Assign(name.to_string()));
+            expr_stack.push(Desc::Assign(name.to_owned()));
             traverse_expr(expr_stack, expr);
         }
-        Expr::TableAssign(name, value) => {
+        Expr::TableAssign(left, right) => {
             expr_stack.push(Desc::TableAssign);
-            traverse_expr(expr_stack, name);
-            traverse_expr(expr_stack, value);
+            traverse_expr(expr_stack, left);
+            traverse_expr(expr_stack, right);
         }
         Expr::Call(name, args) => {
             expr_stack.push(Desc::Call(args.len() as u8));
@@ -162,6 +173,23 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             for arg in args {
                 traverse_expr(expr_stack, arg);
             }
+        }
+        Expr::DotCall(name, args) => {
+            expr_stack.push(Desc::Call((args.len() + 1) as u8));
+            traverse_expr(expr_stack, name);
+            for arg in args {
+                traverse_expr(expr_stack, arg);
+            }
+        }
+        Expr::TableCreate(values) => {
+            expr_stack.push(Desc::TableCreate(values.len() as u8));
+            for value in values {
+                traverse_expr(expr_stack, value);
+            }
+        }
+        Expr::PairCreate(key, value) => {
+            expr_stack.push(Desc::PairCreate(key.to_string()));
+            traverse_expr(expr_stack, value);
         }
     }
 }

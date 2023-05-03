@@ -1,7 +1,8 @@
-pub mod pointer;
-pub mod sun_type;
-pub mod sun_value;
-pub mod table;
-
-pub use sun_type::SunType;
-pub use sun_value::{SunFunc, SunValue};
+pub mod sun_boolean;
+pub mod sun_function;
+pub mod sun_meta;
+pub mod sun_nil;
+pub mod sun_number;
+pub mod sun_object;
+pub mod sun_pointer;
+pub mod sun_table;

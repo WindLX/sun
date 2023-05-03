@@ -1,17 +1,22 @@
-use crate::sun_lib::pointer::SunPointer;
-use crate::sun_lib::{
-    sun_type::SunType, sun_value::SunValue, table::TableMod, Includable, Math, Op, Preludable, Sys,
-    IO,
+use crate::sun_lib::prelude::prelude;
+use crate::sun_lib::value::{
+    sun_meta::OwnSunMeta,
+    sun_object::{SunObject, SunValue},
+    sun_pointer::SunPointer,
+    sun_table::Table,
 };
-use crate::utils::err::SunError;
+use crate::utils::{
+    err::SunError,
+    log::{debug_output, error_output},
+};
 use crate::{parser::parser::ParseProto, vm::command::Command};
 use std::collections::HashMap;
 use std::io::Read;
-use std::process;
 
 pub struct VirtualMachine {
-    stack: Vec<SunValue>,
-    value_map: HashMap<String, SunValue>,
+    stack: Vec<SunPointer>,
+    value_map: HashMap<String, SunPointer>,
+    meta_map: HashMap<&'static str, SunObject>,
     is_debug: bool,
 }
 
@@ -20,9 +25,10 @@ impl VirtualMachine {
         let mut vm = VirtualMachine {
             stack: Vec::new(),
             value_map: HashMap::new(),
+            meta_map: HashMap::new(),
             is_debug,
         };
-        vm.preclude();
+        prelude(&mut vm.value_map, &mut vm.meta_map);
         vm
     }
 
@@ -30,303 +36,230 @@ impl VirtualMachine {
         for (index, command) in proto.commands.iter().enumerate() {
             match &command {
                 Command::LoadValue(name) => {
-                    let value = self.value_map.get(name.as_str()).unwrap_or(&SunValue::Nil);
-                    match value {
-                        SunValue::Function(f) => {
-                            let value = f.clone();
-                            self.stack.push(SunValue::from(value));
-                        }
-                        SunValue::Pointer(p) => self.stack.push(SunValue::from(p.clone())),
-                        // SunValue::Nil => self.stack.push(SunValue::from(name.as_str())),
-                        _ => {
-                            let value = value.clone();
-                            self.stack.push(value);
-                        }
-                    };
-                }
-                Command::SetGlobalValue(n) => {
-                    if n == "_" {
-                        self.stack.pop();
-                    } else {
-                        self.value_map
-                            .insert(n.to_string(), self.stack.pop().unwrap_or(SunValue::Nil));
-                    }
-                }
-                Command::AddValue(value) => match value {
-                    SunValue::Table(t) => {
-                        let value = SunPointer::new(SunValue::from(t.clone()));
-                        self.stack.push(SunValue::from(value));
-                    }
-                    _ => self.stack.push(value.clone()),
-                },
-                Command::LoadTableValueByKey => match self.stack.pop() {
-                    Some(SunValue::Table(t)) => match self.stack.pop() {
-                        Some(SunValue::String(k)) => match t.get_by_key(k.as_str()) {
-                            Some(p) => {
-                                self.stack.push(SunValue::from(p));
-                            }
-                            None => {
-                                eprintln!(
-                                    "{}",
-                                    SunError::KeyError(format!(
-                                        "failed to find value by key `{k}`"
-                                    ),)
-                                );
-                                process::exit(0);
-                            }
-                        },
-                        other => {
-                            eprintln!(
-                                "{}",
-                                SunError::KeyError(format!(
-                                    "invalid key `{}`",
-                                    SunType::from(other.unwrap_or(SunValue::Nil))
-                                ))
-                            );
-                            process::exit(0);
-                        }
-                    },
-                    Some(SunValue::Pointer(p)) => match p.get_type() {
-                        SunType::Table => match self.stack.pop() {
-                            Some(SunValue::String(k)) => match p.get_by_key(k.as_str()) {
-                                Some(pp) => self.stack.push(SunValue::from(pp)),
-                                None => self.stack.push(SunValue::Nil),
-                            },
-                            other => {
-                                eprintln!(
-                                    "{}",
-                                    SunError::KeyError(format!(
-                                        "invalid key `{}`",
-                                        SunType::from(other.unwrap_or(SunValue::Nil))
-                                    ),)
-                                );
-                                process::exit(0);
-                            }
-                        },
-                        other => {
-                            eprintln!(
-                                "{}",
-                                SunError::TypeError(format!("expect `table` but got `{}`", other))
-                            );
-                            process::exit(0);
-                        }
-                    },
-                    other => {
-                        eprintln!(
-                            "{}",
-                            SunError::TypeError(format!(
-                                "expect `table` but got `{}`",
-                                SunType::from(other.unwrap_or(SunValue::Nil))
-                            ))
-                        );
-                        process::exit(0);
-                    }
-                },
-                Command::LoadTableValueByIndex => match self.stack.pop() {
-                    Some(SunValue::Table(t)) => match self.stack.pop() {
-                        Some(SunValue::Number(i)) => match t.get_by_index(i as usize) {
-                            Some(p) => {
-                                self.stack.push(SunValue::from(p));
-                            }
-                            None => {
-                                eprintln!(
-                                    "{}",
-                                    SunError::IndexError(format!("index `{i}` of range"),)
-                                );
-                                process::exit(0);
-                            }
-                        },
-                        other => {
-                            eprintln!(
-                                "{}",
-                                SunError::IndexError(format!(
-                                    "invalid index `{}`",
-                                    SunType::from(other.unwrap_or(SunValue::Nil))
-                                ),)
-                            );
-                            process::exit(0);
-                        }
-                    },
-                    Some(SunValue::Pointer(p)) => match p.get_type() {
-                        SunType::Table => match self.stack.pop() {
-                            Some(SunValue::Number(i)) => match p.get_by_index(i as usize) {
-                                Some(pp) => self.stack.push(SunValue::from(pp)),
-                                None => self.stack.push(SunValue::Nil),
-                            },
-                            other => {
-                                eprintln!(
-                                    "{}",
-                                    SunError::IndexError(format!(
-                                        "invalid index `{}`",
-                                        SunType::from(other.unwrap_or(SunValue::Nil))
-                                    ))
-                                );
-                                process::exit(0);
-                            }
-                        },
-                        other => {
-                            eprintln!(
-                                "{}",
-                                SunError::TypeError(format!("expect `table` but got `{}`", other))
-                            );
-                            process::exit(0);
-                        }
-                    },
-                    other => {
-                        eprintln!(
-                            "{}",
-                            SunError::TypeError(format!(
-                                "expect `table` but got `{}`",
-                                SunType::from(other.unwrap_or(SunValue::Nil))
-                            ))
-                        );
-                        process::exit(0);
-                    }
-                },
-                Command::SetTableValue => match self.stack.pop() {
-                    Some(SunValue::Pointer(p)) => match self.stack.pop() {
-                        Some(v) => p.set_value(v),
-                        None => p.set_value(SunValue::Nil),
-                    },
-                    other => {
-                        eprintln!(
-                            "{}",
-                            SunError::TypeError(format!(
-                                "expect `pointer` but got `{}`",
-                                SunType::from(other.unwrap_or(SunValue::Nil))
-                            ))
-                        );
-                        process::exit(0);
-                    }
-                },
-                Command::LoadFunc(name) => {
-                    let name: &str = name.as_str();
                     let value = self.value_map.get(name).clone();
-                    match value {
-                        Some(SunValue::Function(f)) => self.stack.push(SunValue::from(*f)),
-                        Some(SunValue::Pointer(p)) => match p.get_func() {
-                            Some(f) => {
-                                self.stack.push(f);
+                    if let Some(value) = value {
+                        self.stack.push(value.clone());
+                    } else {
+                        self.stack.push(SunPointer::new(SunValue::Nil));
+                    }
+                }
+                Command::LoadConst(value) => self.stack.push(SunPointer::new(value.clone())),
+                Command::LoadMethod(name) => {
+                    if name == "dot" {
+                        let self_value = self.stack.pop();
+                        match self_value.clone() {
+                            Some(p) => {
+                                let value = p.get();
+                                let value_name = value.get_name();
+                                match self.meta_map.get(value_name) {
+                                    Some(obj) => match self.stack.pop() {
+                                        Some(p) => {
+                                            let method_string = p.get();
+                                            if let SunValue::String(ref method_name) = method_string
+                                            {
+                                                match obj.get_method(method_name) {
+                                                    Some(method) => {
+                                                        self.stack.push(self_value.unwrap());
+                                                        self.stack.push(SunPointer::new(
+                                                            SunValue::from(method),
+                                                        ));
+                                                    }
+                                                    None => {
+                                                        let e = SunError::AttributeError(format!(
+                                                            "failed to find attribute `{}` for type `{}`",
+                                                            method_name, value_name
+                                                        ));
+                                                        error_output(e);
+                                                    }
+                                                }
+                                            } else {
+                                                let e = SunError::ParaError(format!(
+                                                    "need attribute name but got `{}`",
+                                                    method_string
+                                                ));
+                                                error_output(e);
+                                            }
+                                        }
+                                        None => {
+                                            let e = SunError::RunError(format!(
+                                                "stack is empty so failed to find attribute"
+                                            ));
+                                            error_output(e);
+                                        }
+                                    },
+                                    None => {
+                                        let e = SunError::TypeError(format!(
+                                            "`{value_name}` is not a valid sun type"
+                                        ));
+                                        error_output(e);
+                                    }
+                                }
                             }
                             None => {
-                                eprintln!(
-                                    "{}",
-                                    SunError::CallError(format!("failed to find function {name}"))
-                                );
-                                process::exit(0);
+                                let e = SunError::RunError(format!(
+                                    "stack is empty so failed to find object"
+                                ));
+                                error_output(e);
                             }
-                        },
-                        _ => {
-                            eprintln!(
-                                "{}",
-                                SunError::CallError(format!("failed to find function {name}"))
-                            );
-                            process::exit(0);
+                        }
+                    } else {
+                        match self.stack.last() {
+                            Some(p) => {
+                                let value = p.get();
+                                let value_name = value.get_name();
+                                match self.meta_map.get(value_name) {
+                                    Some(obj) => match obj.get_method(name) {
+                                        Some(method) => {
+                                            self.stack.push(SunPointer::new(SunValue::from(method)))
+                                        }
+                                        None => {
+                                            let e = SunError::AttributeError(format!(
+                                                "failed to find attribute `{}` for type `{}`",
+                                                name, value_name
+                                            ));
+                                            error_output(e);
+                                        }
+                                    },
+                                    None => {
+                                        let e = SunError::TypeError(format!(
+                                            "`{value_name}` is not a valid sun type"
+                                        ));
+                                        error_output(e);
+                                    }
+                                }
+                            }
+                            None => {
+                                let e = SunError::RunError(format!(
+                                    "stack is empty so failed to find object"
+                                ));
+                                error_output(e);
+                            }
                         }
                     }
                 }
-                Command::Call(n) => match self.stack.pop() {
-                    Some(SunValue::Function(f)) => {
-                        let nn = f(self);
-                        if nn != *n {
-                            eprintln!(
-                                "{}",
-                                SunError::ParaError(
-                                    format!(
-                                        "called function needs `{nn}` parameters, but provide `{n}`"
-                                    ),
-                                    index as u64
-                                )
-                            );
-                            process::exit(0)
-                        }
-                    }
-                    Some(SunValue::Pointer(p)) => match p.get_func() {
-                        Some(f) => {
-                            if let SunValue::Function(ff) = f {
-                                let nn = ff(self);
-                                if nn != *n {
-                                    eprintln!(
-                                        "{}",
-                                        SunError::ParaError(
-                                            format!(
-                                        "called function needs `{nn}` parameters, but provide `{n}`"
-                                    ),
-                                            index as u64
-                                        )
-                                    );
-                                    process::exit(0)
+                Command::StoreGlobal(name) => {
+                    self.value_map.insert(
+                        name.to_string(),
+                        self.stack.pop().unwrap_or(SunPointer::new(SunValue::Nil)),
+                    );
+                }
+                Command::SetTable => {
+                    let self_value = self.stack.pop();
+                    match self_value {
+                        Some(p) => {
+                            let mut pp = p.borrow_mut();
+                            match self.stack.pop() {
+                                Some(value) => {
+                                    *pp = value.get();
+                                }
+                                None => {
+                                    let e =
+                                        SunError::ParaError(format!("need new value but falied",));
+                                    error_output(e);
                                 }
                             }
                         }
                         None => {
-                            eprintln!(
-                                "{}",
-                                SunError::CallError(format!(
-                                    "this pointer doesn't point a function"
-                                ))
-                            );
-                            process::exit(0);
+                            let e = SunError::RunError(format!(
+                                "stack is empty so failed to find object"
+                            ));
+                            error_output(e);
                         }
-                    },
-                    Some(other) => {
-                        eprintln!(
-                            "{}",
-                            SunError::CallError(format!("{} isn't function", SunType::from(other)))
-                        );
-                        process::exit(0);
+                    }
+                }
+                Command::CreateTable(n) => {
+                    let mut table = Table::new();
+                    for _ in 1..=*n {
+                        match self.stack.pop() {
+                            Some(p) => {
+                                let value = p.get();
+                                match value {
+                                    SunValue::Table(ref t) => match t.get_by_idx(0) {
+                                        Some(p) => {
+                                            let content = p.get();
+                                            if let SunValue::String(s) = content {
+                                                if s == "pair" {
+                                                    table.extend(t.clone())
+                                                }
+                                            } else {
+                                                table.append(value)
+                                            }
+                                        }
+                                        None => table.append(value),
+                                    },
+                                    _ => table.append(value),
+                                }
+                            }
+                            None => {
+                                let e = SunError::RunError(format!(
+                                    "stack is empty so failed to set value for table"
+                                ));
+                                error_output(e);
+                            }
+                        }
+                    }
+                    self.stack.push(SunPointer::new(SunValue::from(table)));
+                }
+                Command::SetPair(key) => {
+                    let mut table = Table::new();
+                    match self.stack.pop() {
+                        Some(p) => {
+                            let value = p.get();
+                            table.append(SunValue::String("pair".to_owned()));
+                            table.append_kv(key.to_owned(), value);
+                            self.stack.push(SunPointer::new(SunValue::from(table)));
+                        }
+                        None => {
+                            let e = SunError::RunError(format!(
+                                "stack is empty so failed to set value for key `{key}`"
+                            ));
+                            error_output(e);
+                        }
+                    }
+                }
+                Command::Call(n) => match self.stack.pop() {
+                    Some(p) => {
+                        let value = p.get();
+                        match value {
+                            SunValue::Function(f) => {
+                                let mut args = Vec::new();
+                                for i in 1..=*n {
+                                    if let Some(arg) = self.stack.pop() {
+                                        args.push(arg)
+                                    } else {
+                                        let e = SunError::CallError(format!(
+                                            "need `{n}` but provide `{i}` parameters",
+                                        ));
+                                        error_output(e);
+                                    }
+                                }
+                                let result = f(args);
+                                self.stack.extend(result);
+                            }
+                            other => {
+                                let e =
+                                    SunError::CallError(format!("`{}` is not a function", other));
+                                error_output(e);
+                            }
+                        }
                     }
                     None => {
-                        eprintln!(
-                            "{}",
-                            SunError::CallError("failed to find function".to_string())
-                        );
-                        process::exit(0);
+                        let e = SunError::RunError(format!(
+                            "stack is empty so failed to find function"
+                        ));
+                        error_output(e);
                     }
                 },
             }
             if self.is_debug == true {
                 println!();
-                println!("--- index ---");
-                println!("{index}");
-                println!("--- command ---");
-                println!("command: {command:?}");
-                println!("--- stack ---");
-                println!("{:?}", self.stack);
-                println!("--- value_map ---");
-                println!("{:#?}", self.value_map);
+                debug_output(index, false);
+                debug_output(command, false);
+                debug_output(&self.stack, false);
+                debug_output(&self.value_map, true);
+                debug_output(&self.meta_map, true);
                 println!();
             }
         }
-    }
-
-    fn preclude(&mut self) {
-        IO.include(&mut self.value_map);
-        Sys.include(&mut self.value_map);
-        Math.include(&mut self.value_map);
-        Op.include(&mut self.value_map);
-        TableMod.include(&mut self.value_map);
-
-        IO.prelude(&mut self.value_map);
-        Sys.prelude(&mut self.value_map);
-        Math.prelude(&mut self.value_map);
-        Op.prelude(&mut self.value_map);
-        TableMod.prelude(&mut self.value_map);
-    }
-
-    pub fn pop(&mut self) -> Option<SunValue> {
-        self.stack.pop()
-    }
-
-    pub fn push(&mut self, value: SunValue) {
-        self.stack.push(value);
-    }
-
-    pub fn len(&mut self) -> usize {
-        self.stack.len()
-    }
-
-    pub fn remove(&mut self, key: &str) {
-        self.value_map.remove(key);
     }
 }

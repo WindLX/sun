@@ -1,4 +1,4 @@
-use crate::sun_lib::{sun_type::SunType, sun_value::SunValue, Includable, Preludable, SunMod};
+use crate::sun_lib::{sun_meta::SunType, sun_value::SunValue, Includable, Preludable, SunMod};
 use crate::utils::err::SunError;
 use crate::vm::machine::VirtualMachine;
 use crate::{consts_none, docs_none, funcs, funcs_none};
