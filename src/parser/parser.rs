@@ -42,7 +42,19 @@ impl<T: Read> ParseProto<T> {
     }
 
     fn parse_expr(&mut self) -> Box<Expr> {
-        self.parse_0()
+        match self.tokenizer.peek() {
+            &Token::DefClass => self.parse_defclass(),
+            &Token::DefFunction => self.parse_deffunc(),
+            _ => self.parse_control(),
+        }
+    }
+
+    fn parse_control(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::If => self.parse_if(),
+            &Token::Loop => self.parse_loop(),
+            _ => self.parse_0(),
+        }
     }
 
     // add sub and or xor
@@ -161,10 +173,10 @@ impl<T: Read> ParseProto<T> {
                 let mut args = Vec::new();
                 self.tokenizer.next();
                 if self.tokenizer.peek() != &Token::ParR {
-                    args.push(self.parse_expr());
+                    args.push(self.parse_0());
                     while self.tokenizer.peek() == &Token::Comma {
                         self.tokenizer.next();
-                        args.push(self.parse_expr());
+                        args.push(self.parse_0());
                     }
                 }
                 self.expect(Token::ParR);
@@ -176,9 +188,9 @@ impl<T: Read> ParseProto<T> {
             &Token::Assign => {
                 self.tokenizer.next();
                 match *name {
-                    Expr::Variable(n) => Box::new(Expr::Assign(n, self.parse_expr())),
+                    Expr::Variable(n) => Box::new(Expr::Assign(n, self.parse_0())),
                     ta @ (Expr::Index(_, _) | Expr::Dot(_, _)) => {
-                        Box::new(Expr::TableAssign(Box::new(ta), self.parse_expr()))
+                        Box::new(Expr::TableAssign(Box::new(ta), self.parse_0()))
                     }
                     _ => {
                         let e = SunError::AssignError(format!(
@@ -272,14 +284,16 @@ impl<T: Read> ParseProto<T> {
     }
 
     fn parse_pair(&mut self) -> Box<Expr> {
-        let left = self.parse_expr();
+        let left = self.parse_0();
         match self.tokenizer.peek() {
             &Token::Colon => {
                 self.tokenizer.next();
-                let right = self.parse_expr();
+                let right = self.parse_0();
                 match *left {
                     Expr::Constant(key) => match key {
-                        SunValue::String(key) => Box::new(Expr::PairCreate(key, right)),
+                        key @ SunValue::String(_) => {
+                            Box::new(Expr::PairCreate((&key).into(), right))
+                        }
                         other => {
                             let e = SunError::KeyError(format!(
                                 "`{other}` is not a valid key at line {}",
@@ -299,6 +313,106 @@ impl<T: Read> ParseProto<T> {
             }
             _ => left,
         }
+    }
+
+    // def class
+    fn parse_defclass(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::DefClass => {
+                self.tokenizer.next();
+                todo!("def class")
+            }
+            _ => self.parse_0(),
+        }
+    }
+
+    // def function
+    fn parse_deffunc(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::DefClass => {
+                self.tokenizer.next();
+                todo!("def function")
+            }
+            _ => self.parse_0(),
+        }
+    }
+
+    // condition
+    fn parse_cond(&mut self) -> Box<Expr> {
+        let mut left = self.parse_0();
+        self.unexpect_assign(&mut left);
+        match self.tokenizer.peek() {
+            &Token::Eq => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::Eq(left, right))
+            }
+            &Token::NotEq => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::NotEq(left, right))
+            }
+            &Token::Le => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::Le(left, right))
+            }
+            &Token::Ge => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::Ge(left, right))
+            }
+            &Token::Less => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::Less(left, right))
+            }
+            &Token::Greater => {
+                self.tokenizer.next();
+                let mut right = self.parse_0();
+                self.unexpect_assign(&mut right);
+                Box::new(Expr::Greater(left, right))
+            }
+            other => {
+                let e = SunError::SymbolError(format!(
+                    "unexpected token `{:?}` at line {}",
+                    other.clone(),
+                    self.tokenizer.line()
+                ));
+                error_output(e)
+            }
+        }
+    }
+
+    // if
+    fn parse_if(&mut self) -> Box<Expr> {
+        self.expect(Token::If);
+        let cond = self.parse_cond();
+        self.expect(Token::Colon);
+        let then_expr = self.parse_control();
+        let else_expr = if let &Token::Else = self.tokenizer.peek() {
+            self.tokenizer.next();
+            Some(self.parse_expr())
+        } else {
+            None
+        };
+        self.expect(Token::Semi);
+        Box::new(Expr::If(cond, then_expr, else_expr))
+    }
+
+    // loop
+    fn parse_loop(&mut self) -> Box<Expr> {
+        self.expect(Token::Loop);
+        let cond = self.parse_cond();
+        self.expect(Token::Colon);
+        let body = self.parse_expr();
+        self.expect(Token::Semi);
+        Box::new(Expr::Loop(cond, body))
     }
 
     fn parse_primary(&mut self) -> Box<Expr> {
@@ -327,7 +441,7 @@ impl<T: Read> ParseProto<T> {
             }
             &Token::ParL => {
                 self.tokenizer.next();
-                let expr = self.parse_expr();
+                let expr = self.parse_0();
                 self.expect(Token::ParR);
                 expr
             }
@@ -359,5 +473,15 @@ impl<T: Read> ParseProto<T> {
             }
         };
         token
+    }
+
+    fn unexpect_assign(&mut self, expr: &mut Box<Expr>) {
+        if let Expr::Assign(_, _) | Expr::TableAssign(_, _) = *(*expr) {
+            let e = SunError::SymbolError(format!(
+                "assign statement can't be condition at line {}",
+                self.tokenizer.line()
+            ));
+            error_output(e)
+        }
     }
 }

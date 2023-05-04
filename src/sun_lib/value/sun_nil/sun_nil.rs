@@ -2,8 +2,8 @@ use super::super::{
     sun_function::Function,
     sun_meta::{
         op::{
-            AddAble, AndAble, ConjAble, DivAble, FacAble, MulAble, NegAble, NotAble, OrAble,
-            PowAble, RemAble, SubAble, XorAble,
+            AddAble, AndAble, CompareAble, ConjAble, DivAble, FacAble, MulAble, NegAble, NotAble,
+            OrAble, PowAble, RemAble, SubAble, XorAble,
         },
         OwnSunMeta,
     },
@@ -48,14 +48,14 @@ impl SunNil {
 
 macro_rules! nil_op {
     () => {{
-        let f = |args: Vec<SunPointer>| {
-            let arg_0 = args[0].get();
-            if let SunValue::Nil = arg_0 {
-                vec![SunPointer::new(SunValue::Nil)]
-            } else {
-                vec![]
-            }
-        };
+        let f = |_: Vec<SunPointer>| vec![SunPointer::new(SunValue::Nil)];
+        f
+    }};
+}
+
+macro_rules! nil_compare {
+    () => {{
+        let f = |_: Vec<SunPointer>| vec![SunPointer::new(SunValue::from(false))];
         f
     }};
 }
@@ -135,5 +135,31 @@ impl XorAble for SunNil {
 impl NotAble for SunNil {
     fn not() -> Function {
         nil_op!()
+    }
+}
+
+impl CompareAble for SunNil {
+    fn eq() -> Function {
+        nil_compare!()
+    }
+
+    fn ge() -> Function {
+        nil_compare!()
+    }
+
+    fn greater() -> Function {
+        nil_compare!()
+    }
+
+    fn le() -> Function {
+        nil_compare!()
+    }
+
+    fn less() -> Function {
+        nil_compare!()
+    }
+
+    fn noteq() -> Function {
+        nil_compare!()
     }
 }

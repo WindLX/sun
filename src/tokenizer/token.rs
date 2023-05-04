@@ -4,6 +4,19 @@ pub enum Token {
     Nil,
     True,
     False,
+
+    // ? |
+    If,
+    Else,
+
+    // $
+    Loop,
+
+    // @ $
+    DefFunction,
+    DefClass,
+
+    // && || ~ ^^
     And,
     Or,
     Not,
@@ -18,7 +31,7 @@ pub enum Token {
     Pow,
     Fac,
 
-    // == != <= >= < > =
+    // == ~= <= >= < > =
     Eq,
     NotEq,
     Le,
@@ -33,10 +46,11 @@ pub enum Token {
     CurR,
     SquL,
     SquR,
-    // . , :
+    // . , : ;
     Dot,
     Comma,
     Colon,
+    Semi,
 
     // constants value
     Number(f64),
@@ -45,7 +59,7 @@ pub enum Token {
     Name(String),
 
     // string
-    String(String),
+    String(Vec<u8>),
 
     // end
     Eos,

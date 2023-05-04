@@ -50,3 +50,12 @@ impl fmt::Debug for SunPointer {
         write!(f, "{:?}", self.pointer.borrow())
     }
 }
+
+impl PartialEq for SunPointer {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.pointer, &other.pointer)
+            || *self.pointer.borrow() == *other.pointer.borrow()
+    }
+}
+
+impl Eq for SunPointer {}

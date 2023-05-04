@@ -194,3 +194,43 @@ macro_rules! single_op_b {
         f as Function
     }};
 }
+
+#[macro_export]
+macro_rules! compare_op_b {
+    ($op:tt) => {{
+        use crate::sun_lib::value::sun_function::Function;
+        let f = |args: Vec<SunPointer>| {
+            let arg_0 = args[0].get();
+            let arg_1 = args[1].get();
+            let res = match (arg_0, arg_1) {
+                (SunValue::Boolean(b1), SunValue::Boolean(b2)) => {
+                    let value = b1 $op b2;
+                    vec![SunPointer::new(SunValue::from(value))]
+                }
+                _ => Vec::new(),
+            };
+            res
+        };
+        f as Function
+    }};
+}
+
+#[macro_export]
+macro_rules! compare_op {
+    ($op:tt) => {{
+        use crate::sun_lib::value::sun_function::Function;
+        let f = |args: Vec<SunPointer>| {
+            let arg_0 = args[0].get();
+            let arg_1 = args[1].get();
+            let res = match (arg_0, arg_1) {
+                (SunValue::Number(n1), SunValue::Number(n2)) => {
+                    let value = n1 $op n2;
+                    vec![SunPointer::new(SunValue::from(value))]
+                }
+                _ => Vec::new(),
+            };
+            res
+        };
+        f as Function
+    }};
+}

@@ -27,6 +27,16 @@ pub enum Expr {
     DotCall(Box<Expr>, Vec<Box<Expr>>), // 5
     Constant(SunValue),
     Variable(String),
+    // condition
+    Eq(Box<Expr>, Box<Expr>),
+    NotEq(Box<Expr>, Box<Expr>),
+    Le(Box<Expr>, Box<Expr>),
+    Ge(Box<Expr>, Box<Expr>),
+    Less(Box<Expr>, Box<Expr>),
+    Greater(Box<Expr>, Box<Expr>),
+    // if loop
+    If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
+    Loop(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]
@@ -37,44 +47,75 @@ pub enum Desc {
     Index,
     Assign(String),
     TableAssign,
-    TableCreate(u8),
+    TableCreate(usize),
     PairCreate(String),
-    Call(u8),
+    Call(usize),
     Constant(SunValue),
     Variable(String),
+    If,
+    IfTrueEnd,
+    IfFalse,
+    IfEnd,
+    Loop,
+    LoopStart,
+    LoopEnd,
 }
 
 pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
     let mut expr_stack: Vec<Desc> = Vec::new();
     traverse_expr(&mut expr_stack, &ast);
     let mut commands: Vec<Command> = Vec::new();
-    for desc in expr_stack {
+    for (position, desc) in expr_stack.iter().enumerate() {
         match desc {
             Desc::Single(f) => {
+                commands.push(Command::LoadMethod(f.to_owned()));
                 commands.push(Command::Call(1));
-                commands.push(Command::LoadMethod(f));
             }
             Desc::Double(f) => {
+                commands.push(Command::LoadMethod(f.to_owned()));
                 commands.push(Command::Call(2));
-                commands.push(Command::LoadMethod(f));
             }
             Desc::Call(n) => {
-                commands.push(Command::Call(n));
+                commands.push(Command::Call(*n));
             }
             Desc::Dot => commands.push(Command::LoadMethod("dot".to_string())),
             Desc::Index => {
-                commands.push(Command::Call(2));
                 commands.push(Command::LoadMethod("index".to_string()));
+                commands.push(Command::Call(2));
             }
-            Desc::Variable(v) => commands.push(Command::LoadValue(v)),
-            Desc::Constant(c) => commands.push(Command::LoadConst(c)),
-            Desc::Assign(n) => commands.push(Command::StoreGlobal(n)),
+            Desc::Variable(v) => commands.push(Command::LoadValue(v.to_owned())),
+            Desc::Constant(c) => commands.push(Command::LoadConst(c.to_owned())),
+            Desc::Assign(n) => commands.push(Command::StoreGlobal(n.to_owned())),
             Desc::TableAssign => commands.push(Command::SetTable),
-            Desc::TableCreate(n) => commands.push(Command::CreateTable(n)),
-            Desc::PairCreate(k) => commands.push(Command::SetPair(k)),
+            Desc::TableCreate(n) => commands.push(Command::CreateTable(n.to_owned())),
+            Desc::PairCreate(k) => commands.push(Command::SetPair(k.to_owned())),
+            Desc::If => {
+                let if_false_pos = count_desc_distance(&expr_stack, position, &Desc::IfFalse);
+                let if_end_pos = count_desc_distance(&expr_stack, position, &Desc::IfEnd).unwrap();
+                match if_false_pos {
+                    Some(pos) => commands.push(Command::TestJump(pos - 1)),
+                    None => commands.push(Command::TestJump(if_end_pos - 1)),
+                }
+            }
+            Desc::IfTrueEnd => {
+                let if_end_pos = count_desc_distance(&expr_stack, position, &Desc::IfEnd).unwrap();
+                commands.push(Command::Jump(if_end_pos - 1));
+            }
+            Desc::IfFalse => continue,
+            Desc::IfEnd => continue,
+            Desc::Loop => continue,
+            Desc::LoopStart => {
+                let loop_end_pos =
+                    count_desc_distance(&expr_stack, position, &Desc::LoopEnd).unwrap();
+                commands.push(Command::TestJump(loop_end_pos + 1));
+            }
+            Desc::LoopEnd => {
+                let loop_pos =
+                    reverse_count_desc_distance(&expr_stack, position, &Desc::Loop).unwrap();
+                commands.push(Command::Back(loop_pos));
+            }
         }
     }
-    commands.reverse();
     if check == true {
         debug_output(&commands, false);
     }
@@ -84,112 +125,230 @@ pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
 fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
     match expr {
         Expr::Add(left, right) => {
-            expr_stack.push(Desc::Double("add".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("add".to_string()));
         }
         Expr::Sub(left, right) => {
-            expr_stack.push(Desc::Double("sub".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("sub".to_string()));
         }
         Expr::Mul(left, right) => {
-            expr_stack.push(Desc::Double("mul".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("mul".to_string()));
         }
         Expr::Div(left, right) => {
-            expr_stack.push(Desc::Double("div".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("div".to_string()));
         }
         Expr::Rem(left, right) => {
-            expr_stack.push(Desc::Double("rem".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("rem".to_string()));
         }
         Expr::Pow(left, right) => {
-            expr_stack.push(Desc::Double("pow".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("pow".to_string()));
         }
         Expr::And(left, right) => {
-            expr_stack.push(Desc::Double("and".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("and".to_string()));
         }
         Expr::Or(left, right) => {
-            expr_stack.push(Desc::Double("or".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("or".to_string()));
         }
         Expr::Xor(left, right) => {
-            expr_stack.push(Desc::Double("xor".to_string()));
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("xor".to_string()));
         }
         Expr::Dot(left, right) => {
-            expr_stack.push(Desc::Dot);
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Dot);
         }
         Expr::Index(left, right) => {
-            expr_stack.push(Desc::Index);
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Index);
         }
         Expr::Neg(left) => {
-            expr_stack.push(Desc::Single("neg".to_string()));
             traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Single("neg".to_string()));
         }
         Expr::Not(left) => {
-            expr_stack.push(Desc::Single("not".to_string()));
             traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Single("not".to_string()));
         }
         Expr::Fac(left) => {
-            expr_stack.push(Desc::Single("fac".to_string()));
             traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Single("fac".to_string()));
         }
         Expr::Conj(left) => {
-            expr_stack.push(Desc::Single("conj".to_string()));
             traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Single("conj".to_string()));
+        }
+        Expr::Eq(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("eq".to_string()));
+        }
+        Expr::NotEq(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("noteq".to_string()));
+        }
+        Expr::Le(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("le".to_string()));
+        }
+        Expr::Ge(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("ge".to_string()));
+        }
+        Expr::Less(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("less".to_string()));
+        }
+        Expr::Greater(left, right) => {
+            traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::Double("greater".to_string()));
         }
         Expr::Constant(value) => {
             expr_stack.push(Desc::Constant(value.clone()));
         }
         Expr::Variable(name) => expr_stack.push(Desc::Variable(name.to_owned())),
         Expr::Assign(name, expr) => {
-            expr_stack.push(Desc::Assign(name.to_owned()));
             traverse_expr(expr_stack, expr);
+            expr_stack.push(Desc::Assign(name.to_owned()));
         }
         Expr::TableAssign(left, right) => {
-            expr_stack.push(Desc::TableAssign);
-            traverse_expr(expr_stack, left);
             traverse_expr(expr_stack, right);
+            traverse_expr(expr_stack, left);
+            expr_stack.push(Desc::TableAssign);
         }
         Expr::Call(name, args) => {
-            expr_stack.push(Desc::Call(args.len() as u8));
-            traverse_expr(expr_stack, name);
-            for arg in args {
+            for arg in args.iter().rev() {
                 traverse_expr(expr_stack, arg);
             }
+            traverse_expr(expr_stack, name);
+            expr_stack.push(Desc::Call(args.len()));
         }
         Expr::DotCall(name, args) => {
-            expr_stack.push(Desc::Call((args.len() + 1) as u8));
-            traverse_expr(expr_stack, name);
-            for arg in args {
+            for arg in args.iter().rev() {
                 traverse_expr(expr_stack, arg);
             }
+            traverse_expr(expr_stack, name);
+            expr_stack.push(Desc::Call(args.len() + 1));
         }
         Expr::TableCreate(values) => {
-            expr_stack.push(Desc::TableCreate(values.len() as u8));
             for value in values {
                 traverse_expr(expr_stack, value);
             }
+            expr_stack.push(Desc::TableCreate(values.len()));
         }
         Expr::PairCreate(key, value) => {
-            expr_stack.push(Desc::PairCreate(key.to_string()));
             traverse_expr(expr_stack, value);
+            expr_stack.push(Desc::PairCreate(key.to_string()));
+        }
+        Expr::If(cond, then, else_) => {
+            traverse_expr(expr_stack, cond);
+            expr_stack.push(Desc::If);
+            traverse_expr(expr_stack, then);
+            expr_stack.push(Desc::IfTrueEnd);
+            if let Some(else_) = else_ {
+                expr_stack.push(Desc::IfFalse);
+                traverse_expr(expr_stack, else_)
+            }
+            expr_stack.push(Desc::IfEnd);
+        }
+        Expr::Loop(cond, body) => {
+            expr_stack.push(Desc::Loop);
+            traverse_expr(expr_stack, cond);
+            expr_stack.push(Desc::LoopStart);
+            traverse_expr(expr_stack, body);
+            expr_stack.push(Desc::LoopEnd);
+        }
+    }
+}
+
+fn count_desc_distance(
+    expr_stack: &Vec<Desc>,
+    position: usize,
+    target_desc: &Desc,
+) -> Option<usize> {
+    let mut count = 0;
+    let mut is_found = false;
+    let p = expr_stack[position..].iter().position(|desc| match desc {
+        t if t == target_desc => {
+            is_found = true;
+            true
+        }
+        Desc::Single(_) | Desc::Double(_) | Desc::Index => {
+            if is_found == false {
+                count += 1
+            }
+            false
+        }
+        _ => false,
+    });
+    if let Some(p) = p {
+        Some(p + count)
+    } else {
+        None
+    }
+}
+
+fn reverse_count_desc_distance(
+    expr_stack: &[Desc],
+    position: usize,
+    target_desc: &Desc,
+) -> Option<usize> {
+    let mut count = 0;
+    let mut is_found = false;
+    let p = expr_stack[..=position].iter().rposition(|desc| match desc {
+        t if t == target_desc => {
+            is_found = true;
+            true
+        }
+        Desc::Single(_) | Desc::Double(_) | Desc::Index => {
+            if is_found == false {
+                count += 1
+            }
+            false
+        }
+        _ => false,
+    });
+    if let Some(mut p) = p {
+        p = position - p;
+        Some(p + count)
+    } else {
+        None
+    }
+}
+
+impl PartialEq for Desc {
+    fn eq(&self, other: &Self) -> bool {
+        use Desc::*;
+        match (self, other) {
+            (IfTrueEnd, IfTrueEnd) => true,
+            (IfFalse, IfFalse) => true,
+            (IfEnd, IfEnd) => true,
+            (Loop, Loop) => true,
+            (LoopEnd, LoopEnd) => true,
+            (LoopStart, LoopStart) => true,
+            _ => false,
         }
     }
 }

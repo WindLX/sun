@@ -39,13 +39,11 @@ macro_rules! add_prelude_methods {
 }
 
 fn print(args: Vec<SunPointer>) -> Vec<SunPointer> {
-    let mut log = String::new();
-    for (i, arg) in args.iter().enumerate() {
-        log.push_str(arg.get().to_string().as_str());
-        if i < args.len() - 1 {
-            log.push_str(", ");
-        }
-    }
+    let log = args
+        .iter()
+        .map(|arg| arg.get().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
     log_output(log);
     Vec::new()
 }

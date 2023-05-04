@@ -17,23 +17,31 @@ pub struct VirtualMachine {
     stack: Vec<SunPointer>,
     value_map: HashMap<String, SunPointer>,
     meta_map: HashMap<&'static str, SunObject>,
+    function_map: HashMap<String, Vec<Command>>,
     is_debug: bool,
+    check_global: bool,
+    check_stack: bool,
 }
 
 impl VirtualMachine {
-    pub fn new(is_debug: bool) -> Self {
+    pub fn new(is_debug: bool, check_stack: bool, check_global: bool) -> Self {
         let mut vm = VirtualMachine {
             stack: Vec::new(),
             value_map: HashMap::new(),
             meta_map: HashMap::new(),
+            function_map: HashMap::new(),
             is_debug,
+            check_global,
+            check_stack,
         };
         prelude(&mut vm.value_map, &mut vm.meta_map);
         vm
     }
 
     pub fn run<T: Read>(&mut self, proto: &ParseProto<T>) {
-        for (index, command) in proto.commands.iter().enumerate() {
+        let mut pc = 1;
+        while pc <= proto.commands.len() {
+            let command = &proto.commands[pc - 1];
             match &command {
                 Command::LoadValue(name) => {
                     let value = self.value_map.get(name).clone();
@@ -55,9 +63,11 @@ impl VirtualMachine {
                                     Some(obj) => match self.stack.pop() {
                                         Some(p) => {
                                             let method_string = p.get();
-                                            if let SunValue::String(ref method_name) = method_string
+                                            if let method_name @ SunValue::String(_) = method_string
                                             {
-                                                match obj.get_method(method_name) {
+                                                match obj
+                                                    .get_method((&method_name).to_string().as_str())
+                                                {
                                                     Some(method) => {
                                                         self.stack.push(self_value.unwrap());
                                                         self.stack.push(SunPointer::new(
@@ -143,6 +153,25 @@ impl VirtualMachine {
                         self.stack.pop().unwrap_or(SunPointer::new(SunValue::Nil)),
                     );
                 }
+                Command::TestJump(jump) => match self.stack.pop() {
+                    Some(p) => {
+                        if let SunValue::Boolean(false) | SunValue::Nil = p.get() {
+                            pc += *jump;
+                        }
+                    }
+                    None => {
+                        let e = SunError::RunError(format!(
+                            "stack is empty so failed to find get condition"
+                        ));
+                        error_output(e);
+                    }
+                },
+                Command::Jump(jump) => {
+                    pc += jump;
+                }
+                Command::Back(jump) => {
+                    pc -= jump;
+                }
                 Command::SetTable => {
                     let self_value = self.stack.pop();
                     match self_value {
@@ -177,8 +206,8 @@ impl VirtualMachine {
                                     SunValue::Table(ref t) => match t.get_by_idx(0) {
                                         Some(p) => {
                                             let content = p.get();
-                                            if let SunValue::String(s) = content {
-                                                if s == "pair" {
+                                            if let s @ SunValue::String(_) = content {
+                                                if s == "pair".into() {
                                                     table.extend(t.clone())
                                                 }
                                             } else {
@@ -205,7 +234,7 @@ impl VirtualMachine {
                     match self.stack.pop() {
                         Some(p) => {
                             let value = p.get();
-                            table.append(SunValue::String("pair".to_owned()));
+                            table.append(SunValue::from("pair"));
                             table.append_kv(key.to_owned(), value);
                             self.stack.push(SunPointer::new(SunValue::from(table)));
                         }
@@ -251,15 +280,26 @@ impl VirtualMachine {
                     }
                 },
             }
+            if self.check_stack == true && self.is_debug == false {
+                println!();
+                debug_output(&self.stack, false);
+                println!();
+            }
+            if self.check_global == true && self.is_debug == false {
+                println!();
+                debug_output(&self.value_map, true);
+                println!()
+            }
             if self.is_debug == true {
                 println!();
-                debug_output(index, false);
+                debug_output(pc, false);
                 debug_output(command, false);
                 debug_output(&self.stack, false);
                 debug_output(&self.value_map, true);
                 debug_output(&self.meta_map, true);
                 println!();
             }
+            pc += 1;
         }
     }
 }

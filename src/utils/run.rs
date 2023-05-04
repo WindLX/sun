@@ -13,8 +13,7 @@ use std::{env, io};
 */
 pub fn run() {
     let (args, config) = get_config();
-    let mut vm = VirtualMachine::new(config.is_debug);
-    // preclude(&mut vm);
+    let mut vm = VirtualMachine::new(config.is_debug, config.check_stack, config.check_global);
     match args.len() {
         1 => loop {
             print!("{}", "[i] ".color(Colors::BrightGreenFg));
@@ -63,39 +62,20 @@ pub fn run() {
 fn get_config() -> (Vec<String>, Config) {
     let mut config = Config::new();
     let mut args: Vec<String> = env::args().collect();
-    if let Some(idx) = args.iter().position(|a| a == "--debug") {
-        args.remove(idx);
-        config.is_debug = true;
-    }
-    if let Some(idx) = args.iter().position(|a| a == "--ct") {
-        args.remove(idx);
-        config.check_tokenizer = true;
-    }
-    if let Some(idx) = args.iter().position(|a| a == "--cp") {
-        args.remove(idx);
-        config.check_parser = true;
-    }
-    if let Some(idx) = args.iter().position(|a| a == "--cc") {
-        args.remove(idx);
-        config.check_command = true;
+    let flags = ["--debug", "--cs", "--cg", "--ct", "--cp", "--cc"];
+    for flag in &flags {
+        if let Some(idx) = args.iter().position(|a| a == flag) {
+            args.remove(idx);
+            match *flag {
+                "--debug" => config.is_debug = true,
+                "--cs" => config.check_stack = true,
+                "--cg" => config.check_global = true,
+                "--ct" => config.check_tokenizer = true,
+                "--cp" => config.check_parser = true,
+                "--cc" => config.check_command = true,
+                _ => unreachable!(),
+            }
+        }
     }
     (args, config)
 }
-
-/*
-    预加载，在虚拟机运行前加载的sun代码
-    para:
-        vm: &VirtualMachine
-*/
-// fn preclude(vm: &mut VirtualMachine) {
-//     match File::open("./preclude/preclude.sun") {
-//         Ok(f) => vm.run(&ParseProto::new(BufReader::new(f), false, false, false)),
-//         Err(_) => {
-//             eprintln!(
-//                 "{}",
-//                 SunError::InputError("failed to find preclude file".to_string())
-//             );
-//             process::exit(0);
-//         }
-//     }
-// }

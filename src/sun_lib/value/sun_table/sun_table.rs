@@ -125,7 +125,8 @@ fn remove() -> Function {
         if let SunValue::Table(t) = &mut *t {
             for arg in args {
                 match arg.get() {
-                    SunValue::String(ref key) => match t.remove_by_key(key) {
+                    key @ SunValue::String(_) => match t.remove_by_key((&key).to_string().as_str())
+                    {
                         Some(p) => res.push(p),
                         None => {
                             warn_output(
@@ -196,14 +197,14 @@ fn insert() -> Function {
         let mut t = p.borrow_mut();
         if let SunValue::Table(t) = &mut *t {
             match (args[0].get(), args[1].get()) {
-                (SunValue::String(key), value) => {
-                    if let Some(_) = t.get_by_key(&key) {
+                (key @ SunValue::String(_), value) => {
+                    if let Some(_) = t.get_by_key((&key).to_string().as_str()) {
                         warn_output(
                             format!("key `{key}` already exists so the value will be changed")
                                 .color(Colors::YellowFg),
                         );
                     }
-                    t.append_kv(key, value)
+                    t.append_kv((&key).into(), value)
                 }
                 (other, _) => {
                     let e = SunError::KeyError(format!("invalid key `{other}`"));
@@ -324,8 +325,8 @@ impl IndexAble for SunTable {
                         error_output(e);
                     }
                 }
-                (SunValue::Table(t), SunValue::String(key)) => {
-                    if let Some(res) = t.get_by_key(key.as_str()) {
+                (SunValue::Table(t), key @ SunValue::String(_)) => {
+                    if let Some(res) = t.get_by_key((&key).to_string().as_str()) {
                         vec![res]
                     } else {
                         let e = SunError::KeyError(format!("failed to get value by key `{key}`"));
@@ -389,3 +390,31 @@ impl fmt::Debug for Table {
         Ok(())
     }
 }
+
+impl PartialEq for Table {
+    fn eq(&self, other: &Self) -> bool {
+        if self.array.len() != other.array.len() || self.dict.len() != other.dict.len() {
+            return false;
+        }
+
+        for (i, value) in self.array.iter().enumerate() {
+            if !value.eq(&other.array[i]) {
+                return false;
+            }
+        }
+
+        for (key, value) in &self.dict {
+            if !value.eq(other
+                .dict
+                .get(key)
+                .unwrap_or(&SunPointer::new(SunValue::Nil)))
+            {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl Eq for Table {}

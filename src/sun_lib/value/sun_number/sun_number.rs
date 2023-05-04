@@ -1,7 +1,7 @@
 use super::super::{
     sun_function::Function,
     sun_meta::{
-        op::{AddAble, DivAble, FacAble, MulAble, NegAble, PowAble, RemAble, SubAble},
+        op::{AddAble, CompareAble, DivAble, FacAble, MulAble, NegAble, PowAble, RemAble, SubAble},
         OwnSunMeta,
     },
     sun_object::{IsSunObject, SunObject, SunValue},
@@ -11,7 +11,7 @@ use crate::utils::{
     err::SunError,
     log::{error_output, warn_output},
 };
-use crate::{add_methods, double_op, single_op};
+use crate::{add_methods, compare_op, double_op, single_op};
 use colorized::*;
 
 #[derive(Clone, Debug)]
@@ -38,7 +38,13 @@ impl SunNumber {
             ("rem", rem),
             ("pow", pow),
             ("fac", fac),
-            ("neg", neg)
+            ("neg", neg),
+            ("eq", eq),
+            ("noteq", noteq),
+            ("le", le),
+            ("ge", ge),
+            ("greater", greater),
+            ("less", less)
         );
         SunNumber { obj }
     }
@@ -166,5 +172,31 @@ impl FacAble for SunNumber {
             res
         };
         f
+    }
+}
+
+impl CompareAble for SunNumber {
+    fn eq() -> Function {
+        compare_op!(==)
+    }
+
+    fn ge() -> Function {
+        compare_op!(>=)
+    }
+
+    fn greater() -> Function {
+        compare_op!(>)
+    }
+
+    fn le() -> Function {
+        compare_op!(<=)
+    }
+
+    fn less() -> Function {
+        compare_op!(<)
+    }
+
+    fn noteq() -> Function {
+        compare_op!(!=)
     }
 }

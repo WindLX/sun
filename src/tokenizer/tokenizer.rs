@@ -104,13 +104,13 @@ impl<R: Read> Tokenizer<R> {
         }
 
         let res = match &s as &str {
+            "F" => Token::False,
+            "T" => Token::True,
             "false" => Token::False,
             "true" => Token::True,
+            "@" => Token::DefFunction,
+            "#" => Token::DefClass,
             "nil" => Token::Nil,
-            "and" => Token::And,
-            "or" => Token::Or,
-            "xor" => Token::Xor,
-            "not" => Token::Not,
             _ => Token::Name(s),
         };
         Ok(res)
@@ -192,7 +192,7 @@ impl<R: Read> Tokenizer<R> {
             Token: 字符串Token
     */
     fn read_string(&mut self, quote: u8) -> Result<Token, SunError> {
-        let mut s = String::new();
+        let mut s = Vec::new();
         loop {
             match self.read_byte().ok_or(SunError::TokenizerError(format!(
                 "read char failed at line {}",
@@ -206,7 +206,7 @@ impl<R: Read> Tokenizer<R> {
                 }
                 ch if ch == quote => break,
                 ch => {
-                    s.push(ch as char);
+                    s.push(ch);
                 }
             }
         }
@@ -245,7 +245,10 @@ impl<R: Read> Tokenizer<R> {
                 b'-' => Ok(Token::Sub),
                 b'*' => Ok(Token::Mul),
                 b'%' => Ok(Token::Mod),
-                b'^' => Ok(Token::Pow),
+                b'^' => self.read_2char(b'^', Token::Xor, Token::Pow),
+                b'?' => Ok(Token::If),
+                b'|' => self.read_2char(b'|', Token::Or, Token::Else),
+                b'$' => Ok(Token::Loop),
                 b'(' => Ok(Token::ParL),
                 b')' => Ok(Token::ParR),
                 b'{' => Ok(Token::CurL),
@@ -253,8 +256,21 @@ impl<R: Read> Tokenizer<R> {
                 b'[' => Ok(Token::SquL),
                 b']' => Ok(Token::SquR),
                 b',' => Ok(Token::Comma),
+                b'!' => Ok(Token::Fac),
+                b';' => Ok(Token::Semi),
+                b'&' => match self.peek_byte() {
+                    Ok(b'&') => {
+                        self.read_byte();
+                        Ok(Token::And)
+                    }
+                    Ok(other) => Err(SunError::SymbolError(format!(
+                        "unexpected byte `{other}` at line {}",
+                        self.line()
+                    ))),
+                    Err(e) => Err(e),
+                },
                 b'=' => self.read_2char(b'=', Token::Eq, Token::Assign),
-                b'!' => self.read_2char(b'=', Token::NotEq, Token::Fac),
+                b'~' => self.read_2char(b'=', Token::NotEq, Token::Not),
                 b':' => Ok(Token::Colon),
                 b'<' => self.read_2char(b'=', Token::Le, Token::Less),
                 b'>' => self.read_2char(b'=', Token::Ge, Token::Greater),

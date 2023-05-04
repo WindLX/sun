@@ -1,13 +1,13 @@
 use super::super::{
     sun_function::Function,
     sun_meta::{
-        op::{AndAble, NotAble, OrAble, XorAble},
+        op::{AndAble, CompareAble, NotAble, OrAble, XorAble},
         OwnSunMeta,
     },
     sun_object::{IsSunObject, SunObject, SunValue},
     sun_pointer::SunPointer,
 };
-use crate::{add_methods, double_op_b, single_op_b};
+use crate::{add_methods, compare_op_b, double_op_b, single_op_b};
 
 #[derive(Clone, Debug)]
 pub struct SunBoolean {
@@ -29,7 +29,13 @@ impl SunBoolean {
             ("and", and),
             ("or", or),
             ("xor", xor),
-            ("not", not)
+            ("not", not),
+            ("eq", eq),
+            ("noteq", noteq),
+            ("le", le),
+            ("ge", ge),
+            ("greater", greater),
+            ("less", less)
         );
         SunBoolean { obj }
     }
@@ -70,5 +76,31 @@ impl XorAble for SunBoolean {
             res
         };
         f
+    }
+}
+
+impl CompareAble for SunBoolean {
+    fn eq() -> Function {
+        compare_op_b!(==)
+    }
+
+    fn ge() -> Function {
+        compare_op_b!(>=)
+    }
+
+    fn greater() -> Function {
+        compare_op_b!(>)
+    }
+
+    fn le() -> Function {
+        compare_op_b!(<=)
+    }
+
+    fn less() -> Function {
+        compare_op_b!(<)
+    }
+
+    fn noteq() -> Function {
+        compare_op_b!(!=)
     }
 }

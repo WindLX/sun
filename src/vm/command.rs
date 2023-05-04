@@ -8,14 +8,14 @@ pub enum Command {
     /*
         从全局变量表加载值到栈上
         para:
-            para_0: &str 变量名
+            para_0: String 变量名
     */
     LoadValue(String),
 
     /*
         将栈上值存储到全局变量表中
         para:
-            para_0: &str 变量名
+            para_0: String 变量名
     */
     StoreGlobal(String),
 
@@ -29,12 +29,22 @@ pub enum Command {
     /*
         获取对象的符号method
         para:
-            para_0: &str 方法名
+            para_0: String 方法名
     */
     LoadMethod(String),
 
-    CreateTable(u8),
+    /*
+        创建表的指令
+        para:
+            para_0: usize 内容个数
+    */
+    CreateTable(usize),
 
+    /*
+        创建键值对指令
+        para:
+            para_0: String 键名
+    */
     SetPair(String),
 
     /*
@@ -45,7 +55,28 @@ pub enum Command {
     /*
         调用函数
         para:
-            para_0: u8 参数个数
+            para_0: usize 参数个数
     */
-    Call(u8),
+    Call(usize),
+
+    /*
+        条件跳转
+        para:
+            para_0: usize 跳转的位置的偏移
+    */
+    TestJump(usize),
+
+    /*
+        无条件跳转
+        para:
+            para_0: usize 跳转的位置偏移
+    */
+    Jump(usize),
+
+    /*
+        无条件反向跳转
+        para:
+            para_0: usize 跳转的位置偏移
+    */
+    Back(usize),
 }
