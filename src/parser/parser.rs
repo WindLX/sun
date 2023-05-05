@@ -363,8 +363,18 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    /// name
     fn parse_7(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::Clone => {
+                self.tokenizer.next();
+                Box::new(Expr::Clone(self.parse_8()))
+            }
+            _ => self.parse_8(),
+        }
+    }
+
+    /// name
+    fn parse_8(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Name(ref name) => {
                 let name = name.clone();

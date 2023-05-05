@@ -16,7 +16,7 @@ checksum = "bb2f3770c8bce3bcda7e149193a069a0f4365bda1fa5cd88e03bca26afc1216c"
 
 [[package]]
 name = "sun"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "colorized",
  "serde",

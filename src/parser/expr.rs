@@ -20,6 +20,7 @@ pub enum Expr {
     Xor(Box<Expr>, Box<Expr>),   // 0
     Dot(Box<Expr>, Box<Expr>),   // 6
     Index(Box<Expr>, Box<Expr>), // 6
+    Clone(Box<Expr>),
     Assign(String, Box<Expr>),
     TableAssign(Box<Expr>, Box<Expr>),
     TableCreate(Vec<Box<Expr>>),
@@ -199,6 +200,10 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
         Expr::Conj(left) => {
             traverse_expr(expr_stack, left);
             expr_stack.push(Desc::Single("conj".to_string()));
+        }
+        Expr::Clone(left) => {
+            traverse_expr(expr_stack, &left);
+            expr_stack.push(Desc::Single("clone".to_string()));
         }
         Expr::Eq(left, right) => {
             traverse_expr(expr_stack, right);

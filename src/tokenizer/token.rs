@@ -6,6 +6,9 @@ pub enum Token {
     True,
     False,
 
+    // '
+    Clone,
+
     // ? ?? |
     If,
     Else,
