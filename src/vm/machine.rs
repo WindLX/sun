@@ -282,7 +282,7 @@ impl VirtualMachine {
             }
             if self.check_stack == true && self.is_debug == false {
                 println!();
-                debug_output(&self.stack, false);
+                debug_output(&self.stack, true);
                 println!();
             }
             if self.check_global == true && self.is_debug == false {
@@ -294,7 +294,7 @@ impl VirtualMachine {
                 println!();
                 debug_output(pc, false);
                 debug_output(command, false);
-                debug_output(&self.stack, false);
+                debug_output(&self.stack, true);
                 debug_output(&self.value_map, true);
                 debug_output(&self.meta_map, true);
                 println!();

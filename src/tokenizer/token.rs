@@ -5,14 +5,15 @@ pub enum Token {
     True,
     False,
 
-    // ? |
+    // ? ?? |
     If,
     Else,
+    End,
 
     // $
     Loop,
 
-    // @ $
+    // @ #
     DefFunction,
     DefClass,
 

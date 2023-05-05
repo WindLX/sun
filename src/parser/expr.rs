@@ -35,8 +35,8 @@ pub enum Expr {
     Less(Box<Expr>, Box<Expr>),
     Greater(Box<Expr>, Box<Expr>),
     // if loop
-    If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
-    Loop(Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Vec<Box<Expr>>, Option<Vec<Box<Expr>>>),
+    Loop(Box<Expr>, Vec<Box<Expr>>),
 }
 
 #[derive(Debug)]
@@ -64,6 +64,7 @@ pub enum Desc {
 pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
     let mut expr_stack: Vec<Desc> = Vec::new();
     traverse_expr(&mut expr_stack, &ast);
+    // println!("{:?}", expr_stack);
     let mut commands: Vec<Command> = Vec::new();
     for (position, desc) in expr_stack.iter().enumerate() {
         match desc {
@@ -253,7 +254,7 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             expr_stack.push(Desc::Call(args.len() + 1));
         }
         Expr::TableCreate(values) => {
-            for value in values {
+            for value in values.iter().rev() {
                 traverse_expr(expr_stack, value);
             }
             expr_stack.push(Desc::TableCreate(values.len()));
@@ -262,22 +263,28 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             traverse_expr(expr_stack, value);
             expr_stack.push(Desc::PairCreate(key.to_string()));
         }
-        Expr::If(cond, then, else_) => {
+        Expr::If(cond, thens, elses) => {
             traverse_expr(expr_stack, cond);
             expr_stack.push(Desc::If);
-            traverse_expr(expr_stack, then);
+            for then in thens {
+                traverse_expr(expr_stack, then);
+            }
             expr_stack.push(Desc::IfTrueEnd);
-            if let Some(else_) = else_ {
+            if let Some(elses) = elses {
                 expr_stack.push(Desc::IfFalse);
-                traverse_expr(expr_stack, else_)
+                for else_ in elses {
+                    traverse_expr(expr_stack, else_);
+                }
             }
             expr_stack.push(Desc::IfEnd);
         }
-        Expr::Loop(cond, body) => {
+        Expr::Loop(cond, bodys) => {
             expr_stack.push(Desc::Loop);
             traverse_expr(expr_stack, cond);
             expr_stack.push(Desc::LoopStart);
-            traverse_expr(expr_stack, body);
+            for body in bodys {
+                traverse_expr(expr_stack, body);
+            }
             expr_stack.push(Desc::LoopEnd);
         }
     }

@@ -30,30 +30,122 @@ impl<T: Read> ParseProto<T> {
 
     fn load(&mut self) {
         loop {
-            let ast = self.parse_expr();
+            let ast = self.parse_chunk();
             if self.check {
                 debug_output(&ast, true);
             }
             self.commands.append(&mut trans(ast, self.check_command));
-            if let &Token::Eos = self.tokenizer.peek() {
-                break;
+            match self.tokenizer.peek() {
+                &Token::Eos => break,
+                &Token::Semi => {
+                    self.tokenizer.next();
+                    continue;
+                }
+                _ => break,
             }
         }
     }
 
-    fn parse_expr(&mut self) -> Box<Expr> {
+    // 语句段
+    fn parse_chunk(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
-            &Token::DefClass => self.parse_defclass(),
-            &Token::DefFunction => self.parse_deffunc(),
-            _ => self.parse_control(),
+            &Token::DefClass | &Token::DefFunction => self.parse_def(),
+            _ => self.parse_block(),
         }
     }
 
+    // 语句块
+    fn parse_block(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::If | &Token::Loop => self.parse_control(),
+            _ => self.parse_expr(),
+        }
+    }
+
+    // 表达式语句
+    fn parse_expr(&mut self) -> Box<Expr> {
+        self.parse_logic()
+    }
+
+    // 流程控制语句
     fn parse_control(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::If => self.parse_if(),
             &Token::Loop => self.parse_loop(),
-            _ => self.parse_0(),
+            _ => unreachable!("parse control"),
+        }
+    }
+
+    // 定义语句
+    fn parse_def(&mut self) -> Box<Expr> {
+        match self.tokenizer.peek() {
+            &Token::DefClass => self.parse_defclass(),
+            &Token::DefFunction => self.parse_deffunc(),
+            _ => unreachable!("parse def"),
+        }
+    }
+
+    // and or xor
+    fn parse_logic(&mut self) -> Box<Expr> {
+        let mut left = self.parse_compare();
+        loop {
+            match self.tokenizer.peek() {
+                &Token::And => {
+                    self.tokenizer.next();
+                    let right = self.parse_compare();
+                    left = Box::new(Expr::And(left, right));
+                }
+                &Token::Or => {
+                    self.tokenizer.next();
+                    let right = self.parse_compare();
+                    left = Box::new(Expr::Or(left, right));
+                }
+                &Token::Xor => {
+                    self.tokenizer.next();
+                    let right = self.parse_compare();
+                    left = Box::new(Expr::Xor(left, right));
+                }
+                _ => break,
+            }
+        }
+        left
+    }
+
+    // compare
+    fn parse_compare(&mut self) -> Box<Expr> {
+        let left = self.parse_0();
+        match self.tokenizer.peek() {
+            &Token::Eq => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::Eq(left, right))
+            }
+            &Token::NotEq => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::NotEq(left, right))
+            }
+            &Token::Le => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::Le(left, right))
+            }
+            &Token::Ge => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::Ge(left, right))
+            }
+            &Token::Less => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::Less(left, right))
+            }
+            &Token::Greater => {
+                self.tokenizer.next();
+                let right = self.parse_0();
+                Box::new(Expr::Greater(left, right))
+            }
+            _ => left,
         }
     }
 
@@ -72,21 +164,21 @@ impl<T: Read> ParseProto<T> {
                     let right = self.parse_1();
                     left = Box::new(Expr::Sub(left, right));
                 }
-                &Token::And => {
-                    self.tokenizer.next();
-                    let right = self.parse_1();
-                    left = Box::new(Expr::And(left, right));
-                }
-                &Token::Or => {
-                    self.tokenizer.next();
-                    let right = self.parse_1();
-                    left = Box::new(Expr::Or(left, right));
-                }
-                &Token::Xor => {
-                    self.tokenizer.next();
-                    let right = self.parse_1();
-                    left = Box::new(Expr::Xor(left, right));
-                }
+                // &Token::And => {
+                //     self.tokenizer.next();
+                //     let right = self.parse_1();
+                //     left = Box::new(Expr::And(left, right));
+                // }
+                // &Token::Or => {
+                //     self.tokenizer.next();
+                //     let right = self.parse_1();
+                //     left = Box::new(Expr::Or(left, right));
+                // }
+                // &Token::Xor => {
+                //     self.tokenizer.next();
+                //     let right = self.parse_1();
+                //     left = Box::new(Expr::Xor(left, right));
+                // }
                 _ => break,
             }
         }
@@ -173,10 +265,10 @@ impl<T: Read> ParseProto<T> {
                 let mut args = Vec::new();
                 self.tokenizer.next();
                 if self.tokenizer.peek() != &Token::ParR {
-                    args.push(self.parse_0());
+                    args.push(self.parse_expr());
                     while self.tokenizer.peek() == &Token::Comma {
                         self.tokenizer.next();
-                        args.push(self.parse_0());
+                        args.push(self.parse_expr());
                     }
                 }
                 self.expect(Token::ParR);
@@ -188,9 +280,9 @@ impl<T: Read> ParseProto<T> {
             &Token::Assign => {
                 self.tokenizer.next();
                 match *name {
-                    Expr::Variable(n) => Box::new(Expr::Assign(n, self.parse_0())),
+                    Expr::Variable(n) => Box::new(Expr::Assign(n, self.parse_expr())),
                     ta @ (Expr::Index(_, _) | Expr::Dot(_, _)) => {
-                        Box::new(Expr::TableAssign(Box::new(ta), self.parse_0()))
+                        Box::new(Expr::TableAssign(Box::new(ta), self.parse_expr()))
                     }
                     _ => {
                         let e = SunError::AssignError(format!(
@@ -283,12 +375,13 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
+    // key-value pair
     fn parse_pair(&mut self) -> Box<Expr> {
-        let left = self.parse_0();
+        let left = self.parse_expr();
         match self.tokenizer.peek() {
             &Token::Colon => {
                 self.tokenizer.next();
-                let right = self.parse_0();
+                let right = self.parse_expr();
                 match *left {
                     Expr::Constant(key) => match key {
                         key @ SunValue::String(_) => {
@@ -322,7 +415,7 @@ impl<T: Read> ParseProto<T> {
                 self.tokenizer.next();
                 todo!("def class")
             }
-            _ => self.parse_0(),
+            _ => self.parse_expr(),
         }
     }
 
@@ -337,8 +430,94 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // condition
-    fn parse_cond(&mut self) -> Box<Expr> {
+    // if
+    fn parse_if(&mut self) -> Box<Expr> {
+        self.expect(Token::If);
+        let mut cond = self.parse_logic_unassign();
+        self.unexpect_assign(&mut cond);
+        self.expect(Token::Colon);
+        let mut thens = Vec::new();
+        if matches!(self.tokenizer.peek(), Token::End | Token::Else) {
+            self.tokenizer.next();
+        } else {
+            thens.push(self.parse_block());
+            while matches!(self.tokenizer.peek(), Token::Semi) {
+                self.tokenizer.next();
+                thens.push(self.parse_block());
+            }
+        }
+        let elses = if let &Token::Else = self.tokenizer.peek() {
+            self.tokenizer.next();
+            let mut elses = Vec::new();
+            if matches!(self.tokenizer.peek(), Token::End) {
+                self.tokenizer.next();
+            } else {
+                elses.push(self.parse_block());
+                while matches!(self.tokenizer.peek(), Token::Semi) {
+                    self.tokenizer.next();
+                    elses.push(self.parse_block());
+                }
+            }
+            Some(elses)
+        } else {
+            None
+        };
+        self.expect(Token::End);
+        Box::new(Expr::If(cond, thens, elses))
+    }
+
+    // loop
+    fn parse_loop(&mut self) -> Box<Expr> {
+        self.expect(Token::Loop);
+        let mut cond = self.parse_logic_unassign();
+        self.unexpect_assign(&mut cond);
+        self.expect(Token::Colon);
+        let mut bodys = Vec::new();
+        if matches!(self.tokenizer.peek(), Token::End) {
+            self.tokenizer.next();
+        } else {
+            bodys.push(self.parse_block());
+            while matches!(self.tokenizer.peek(), Token::Semi) {
+                self.tokenizer.next();
+                bodys.push(self.parse_block());
+            }
+        }
+        self.expect(Token::End);
+        Box::new(Expr::Loop(cond, bodys))
+    }
+
+    // and or xor
+    fn parse_logic_unassign(&mut self) -> Box<Expr> {
+        let mut left = self.parse_compare_unassign();
+        self.unexpect_assign(&mut left);
+        loop {
+            match self.tokenizer.peek() {
+                &Token::And => {
+                    self.tokenizer.next();
+                    let mut right = self.parse_compare_unassign();
+                    self.unexpect_assign(&mut right);
+                    left = Box::new(Expr::And(left, right));
+                }
+                &Token::Or => {
+                    self.tokenizer.next();
+                    let mut right = self.parse_compare_unassign();
+                    self.unexpect_assign(&mut right);
+                    left = Box::new(Expr::Or(left, right));
+                }
+                &Token::Xor => {
+                    self.tokenizer.next();
+                    let mut right = self.parse_compare_unassign();
+                    self.unexpect_assign(&mut right);
+                    left = Box::new(Expr::Xor(left, right));
+                }
+                _ => break,
+            }
+        }
+        left
+    }
+
+    // compare
+    fn parse_compare_unassign(&mut self) -> Box<Expr> {
         let mut left = self.parse_0();
         self.unexpect_assign(&mut left);
         match self.tokenizer.peek() {
@@ -378,41 +557,8 @@ impl<T: Read> ParseProto<T> {
                 self.unexpect_assign(&mut right);
                 Box::new(Expr::Greater(left, right))
             }
-            other => {
-                let e = SunError::SymbolError(format!(
-                    "unexpected token `{:?}` at line {}",
-                    other.clone(),
-                    self.tokenizer.line()
-                ));
-                error_output(e)
-            }
+            _ => left,
         }
-    }
-
-    // if
-    fn parse_if(&mut self) -> Box<Expr> {
-        self.expect(Token::If);
-        let cond = self.parse_cond();
-        self.expect(Token::Colon);
-        let then_expr = self.parse_control();
-        let else_expr = if let &Token::Else = self.tokenizer.peek() {
-            self.tokenizer.next();
-            Some(self.parse_expr())
-        } else {
-            None
-        };
-        self.expect(Token::Semi);
-        Box::new(Expr::If(cond, then_expr, else_expr))
-    }
-
-    // loop
-    fn parse_loop(&mut self) -> Box<Expr> {
-        self.expect(Token::Loop);
-        let cond = self.parse_cond();
-        self.expect(Token::Colon);
-        let body = self.parse_expr();
-        self.expect(Token::Semi);
-        Box::new(Expr::Loop(cond, body))
     }
 
     fn parse_primary(&mut self) -> Box<Expr> {
@@ -441,7 +587,7 @@ impl<T: Read> ParseProto<T> {
             }
             &Token::ParL => {
                 self.tokenizer.next();
-                let expr = self.parse_0();
+                let expr = self.parse_expr();
                 self.expect(Token::ParR);
                 expr
             }
