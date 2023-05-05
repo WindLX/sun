@@ -241,7 +241,7 @@ impl<R: Read> Tokenizer<R> {
                 }
                 b'\r' | b'\t' | b' ' => Ok(self.read_token()),
                 b'+' => Ok(Token::Add),
-                b'-' => Ok(Token::Sub),
+                b'-' => self.read_2char(b'>', Token::Return, Token::Sub),
                 b'*' => Ok(Token::Mul),
                 b'%' => Ok(Token::Mod),
                 b'^' => self.read_2char(b'^', Token::Xor, Token::Pow),

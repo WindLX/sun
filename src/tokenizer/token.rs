@@ -5,6 +5,7 @@ pub enum Token {
     Nil,
     True,
     False,
+    Return,
 
     // '
     Clone,
@@ -44,6 +45,7 @@ pub enum Token {
     Less,
     Greater,
     Assign,
+
     // () {} []
     ParL,
     ParR,
@@ -51,6 +53,7 @@ pub enum Token {
     CurR,
     SquL,
     SquR,
+
     // . , : ;
     Dot,
     Comma,

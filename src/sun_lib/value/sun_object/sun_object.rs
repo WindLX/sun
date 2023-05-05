@@ -102,7 +102,7 @@ pub fn _type() -> Function {
 // 获取数据的拷贝
 pub fn clone() -> Function {
     let f = |value: Vec<SunPointer>| -> Vec<SunPointer> {
-        let res = SunPointer::new(SunValue::from(value[0].get()));
+        let res = value[0].deep_copy();
         vec![res]
     };
     f

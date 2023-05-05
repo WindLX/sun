@@ -32,6 +32,10 @@ impl SunPointer {
     pub fn get(&self) -> SunValue {
         self.pointer.borrow().clone()
     }
+
+    pub fn deep_copy(&self) -> Self {
+        SunPointer::new(self.get())
+    }
 }
 
 impl Deref for SunPointer {

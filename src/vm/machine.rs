@@ -19,6 +19,8 @@ pub struct VirtualMachine {
     stack: Vec<SunPointer>,
     /// 全局变量表
     value_map: HashMap<String, SunPointer>,
+    /// 临时变量表
+    temp_map: HashMap<String, SunPointer>,
     /// meta表
     meta_map: HashMap<&'static str, SunObject>,
     /// 函数表
@@ -37,6 +39,7 @@ impl VirtualMachine {
         let mut vm = VirtualMachine {
             stack: Vec::new(),
             value_map: HashMap::new(),
+            temp_map: HashMap::new(),
             meta_map: HashMap::new(),
             function_map: HashMap::new(),
             is_debug,

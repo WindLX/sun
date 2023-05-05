@@ -39,6 +39,9 @@ pub enum Expr {
     // if loop
     If(Box<Expr>, Vec<Box<Expr>>, Option<Vec<Box<Expr>>>),
     Loop(Box<Expr>, Vec<Box<Expr>>),
+    // function class
+    // DefFunction(String, Option<Vec<String>>, Vec<Box<Expr>>),
+    // Class(String, Option<Vec<String>>, Option<Vec<Box<Expr>>>),
 }
 
 /// 语法树处理中间层
@@ -62,6 +65,7 @@ pub enum Desc {
     Loop,
     LoopStart,
     LoopEnd,
+    // DefFunction(String, Option<Vec<String>>, usize),
 }
 
 /// 将语法树翻译成虚拟机指令
@@ -295,7 +299,13 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
                 traverse_expr(expr_stack, body);
             }
             expr_stack.push(Desc::LoopEnd);
-        }
+        } // Expr::DefFunction(name, args) => {
+          //     for arg in args.iter().rev() {
+          //         traverse_expr(expr_stack, arg);
+          //     }
+          //     traverse_expr(expr_stack, name);
+          //     expr_stack.push(Desc::Call(args.len()));
+          // }
     }
 }
 

@@ -363,6 +363,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
+    /// clone
     fn parse_7(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Clone => {
@@ -447,7 +448,21 @@ impl<T: Read> ParseProto<T> {
         match self.tokenizer.peek() {
             &Token::DefClass => {
                 self.tokenizer.next();
-                todo!("def function")
+                match self.tokenizer.peek() {
+                    &Token::Name(ref name) => {
+                        let name = name.clone();
+                        self.tokenizer.next();
+                        Box::new(Expr::Variable(name))
+                    }
+                    other => {
+                        let e = SunError::SymbolError(format!(
+                            "unexpected token `{:?}` at line {}",
+                            other.clone(),
+                            self.tokenizer.line()
+                        ));
+                        error_output(e)
+                    }
+                }
             }
             _ => self.parse_0(),
         }

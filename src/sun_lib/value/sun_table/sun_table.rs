@@ -101,6 +101,17 @@ impl Table {
         let n = self.dict.len() + self.array.len();
         SunPointer::new(SunValue::from(n as f64))
     }
+
+    /// 自身的深拷贝
+    pub fn deep_copy(&self) -> Self {
+        let array = self.array.iter().map(|p| p.deep_copy()).collect();
+        let dict = self
+            .dict
+            .iter()
+            .map(|(k, p)| (k.clone(), p.deep_copy()))
+            .collect();
+        Table { array, dict }
+    }
 }
 
 /// `Table` 类型的元数据
@@ -129,8 +140,29 @@ impl SunTable {
         obj.set_method("alen", alen());
         obj.set_method("dlen", dlen());
         obj.set_method("len", len());
+        obj.set_method("clone", clone());
         SunTable { obj }
     }
+}
+
+/// 重写自身的深拷贝
+fn clone() -> Function {
+    let f = |args: Vec<SunPointer>| {
+        if args.len() < 1 {
+            {
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args[0].deep_copy();
+        let p = p.borrow();
+        if let SunValue::Table(t) = &*p {
+            vec![SunPointer::new(SunValue::from(t.deep_copy()))]
+        } else {
+            vec![]
+        }
+    };
+    f
 }
 
 /// 从 `Table` 中按索引和键移除多个值
