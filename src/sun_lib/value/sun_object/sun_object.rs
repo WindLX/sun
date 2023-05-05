@@ -84,6 +84,7 @@ impl SunObject {
         let meta = SunMeta::new(name, HashMap::new());
         let mut obj = SunObject { meta };
         obj.set_method("type", _type());
+        obj.set_method("clone", clone());
         obj
     }
 }
@@ -93,6 +94,15 @@ pub fn _type() -> Function {
     let f = |value: Vec<SunPointer>| -> Vec<SunPointer> {
         let value = value[0].get();
         let res = SunPointer::new(SunValue::from(value.get_name().to_string()));
+        vec![res]
+    };
+    f
+}
+
+// 获取数据的拷贝
+pub fn clone() -> Function {
+    let f = |value: Vec<SunPointer>| -> Vec<SunPointer> {
+        let res = SunPointer::new(SunValue::from(value[0].get()));
         vec![res]
     };
     f
