@@ -9,25 +9,24 @@ use std::{
     mem::replace,
 };
 
-/*
-    词法分析器的结构体
-    input: Peekable<Bytes<T>> 输入的sun脚本文件或标准输入
-    ahead: Token 存储向前seek一个Token的结果，用以语法分析
-*/
+/// 词法分析器的结构体
 #[derive(Debug)]
 pub struct Tokenizer<R: Read> {
+    /// `input`: 输入的sun脚本文件或标准输入
     input: Peekable<Bytes<R>>,
+    /// `ahead`: 存储向前seek一个Token的结果，用以语法分析
     ahead: Token,
+    /// `line_num`: 当前分析的行号
     line_num: u64,
+    /// `check`: 词法分析检查的标志
     check: bool,
 }
 
 impl<R: Read> Tokenizer<R> {
-    /*
-        Tokenizer 的构造函数
-        para:
-            input: File sun文件 / sun命令
-            ahead: 初始值为 Token::EOS
+    /**
+        `Tokenizer` 的构造函数
+        + `input`: File Sun文件 / 标准输入
+        + `ahead`: 初始值为 Token::EOS
     */
     pub fn new(input: R, check: bool) -> Self {
         Tokenizer {
@@ -38,14 +37,14 @@ impl<R: Read> Tokenizer<R> {
         }
     }
 
-    /*
+    /**
         向前读取一个u8字符，如果读取为空则返回终止符 None
     */
     fn read_byte(&mut self) -> Option<u8> {
         self.input.next().and_then(|b| Some(b.unwrap()))
     }
 
-    /*
+    /**
         向前看一个u8字符并返回，不移动文件读取的指针
     */
     fn peek_byte(&mut self) -> Result<u8, SunError> {
@@ -59,14 +58,14 @@ impl<R: Read> Tokenizer<R> {
         }
     }
 
-    /*
-        获取长度为两个或一个字符的 Token
-        para:
-            next_char: u8 期望的下一个字符
-            long_token: Token 期望的长度为2的Token
-            short_token: Token 期望的长度为1的Token
-        return:
-            Token
+    /**
+        获取长度为两个或一个字符的 `Token`
+        + `para`:
+            + `next_char`: `u8` 期望的下一个字符
+            + `long_token`: `Token` 期望的长度为2的Token
+            + `short_token`: `Token` 期望的长度为1的Token
+        + `return`:
+            + `Token`
     */
     fn read_2char(
         &mut self,
@@ -82,12 +81,12 @@ impl<R: Read> Tokenizer<R> {
         }
     }
 
-    /*
-        获取下一个变量名或者是否为sun的保留字
-        para:
-            first: u8 第一个字符
-        return:
-            Token: 返回变量名
+    /**
+        获取下一个变量名或者是否为 Sun 的保留字
+        + `para`:
+            + `first`: `u8` 第一个字符
+        + `return`:
+            + `Token`: 返回变量名
     */
     fn read_name(&mut self, first: u8) -> Result<Token, SunError> {
         let mut s = String::new();
@@ -116,12 +115,12 @@ impl<R: Read> Tokenizer<R> {
         Ok(res)
     }
 
-    /*
+    /**
         获取下一个数字
-        para:
-            first: char 第一个字符
-        return:
-            Token: 数字Token
+        + `para`:
+            + `first`: `char` 第一个字符
+        + `return`:
+            + `Token`: 数字 `Token`
     */
     fn read_number(&mut self, first: u8) -> Result<Token, SunError> {
         let mut n = (first - b'0') as i64;
@@ -155,12 +154,12 @@ impl<R: Read> Tokenizer<R> {
         Ok(Token::Number(n as f64))
     }
 
-    /*
+    /**
         获取下一个浮点数
-        para:
-            i: i64 浮点数的整数部分
-        return:
-            Token: 浮点数Token
+        + `para`:
+            + `i`: `i64` 浮点数的整数部分
+        + `return`:
+            + `Token`: 浮点数 `Token`
     */
     fn read_number_fraction(&mut self, i: i64) -> Result<Token, SunError> {
         let mut n: i64 = 0;
@@ -184,12 +183,12 @@ impl<R: Read> Tokenizer<R> {
         Ok(Token::Number(i as f64 + n as f64 / x))
     }
 
-    /*
+    /**
         获取下一个字符串
-        para:
-            quote: char 字符串的开始符
-        return:
-            Token: 字符串Token
+        + `para`:
+            + `quote`: `char` 字符串的开始符
+        + `return`:
+            `Token`: 字符串 `Token`
     */
     fn read_string(&mut self, quote: u8) -> Result<Token, SunError> {
         let mut s = Vec::new();
@@ -213,7 +212,7 @@ impl<R: Read> Tokenizer<R> {
         Ok(Token::String(s))
     }
 
-    /*
+    /**
         跳过注释
     */
     fn read_comment(&mut self) {
@@ -228,10 +227,10 @@ impl<R: Read> Tokenizer<R> {
         }
     }
 
-    /*
-        获取下一个 Token
-        return:
-            Token: 下一个Token
+    /**
+        获取下一个 `Token`
+        + `return`:
+            + `Token`: 下一个 `Token`
     */
     fn read_token(&mut self) -> Token {
         if let Some(ch) = self.read_byte() {
@@ -307,12 +306,13 @@ impl<R: Read> Tokenizer<R> {
     }
 }
 
-/*
+/**
     Tokenizer 的迭代器
 */
 impl<R: Read> Iterator for Tokenizer<R> {
     type Item = Token;
 
+    /// 向前获取一个 `Token`
     fn next(&mut self) -> Option<Self::Item> {
         if self.ahead == Token::Eos {
             match self.read_token() {
@@ -333,10 +333,11 @@ impl<R: Read> Iterator for Tokenizer<R> {
     }
 }
 
-/*
+/**
     Tokenizer 的一些工具方法
 */
 impl<R: Read> Tokenizer<R> {
+    /// 向前查看一个 `Token`，不改变迭代器状态
     pub fn peek(&mut self) -> &Token {
         if self.ahead == Token::Eos {
             self.ahead = self.read_token();
@@ -344,6 +345,7 @@ impl<R: Read> Tokenizer<R> {
         &self.ahead
     }
 
+    /// 获取行号
     pub fn line(&self) -> u64 {
         self.line_num
     }

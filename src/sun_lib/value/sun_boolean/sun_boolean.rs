@@ -9,6 +9,7 @@ use super::super::{
 };
 use crate::{add_methods, compare_op_b, double_op_b, single_op_b};
 
+/// Bool 元数据
 #[derive(Clone, Debug)]
 pub struct SunBoolean {
     obj: SunObject,
@@ -21,6 +22,7 @@ impl IsSunObject for SunBoolean {
 }
 
 impl SunBoolean {
+    /// 创建新的 Bool 元数据
     pub fn new() -> SunBoolean {
         let mut obj = SunObject::new("bool");
         add_methods!(

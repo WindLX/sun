@@ -13,17 +13,26 @@ use crate::{parser::parser::ParseProto, vm::command::Command};
 use std::collections::HashMap;
 use std::io::Read;
 
+/// Sun 虚拟机的结构体
 pub struct VirtualMachine {
+    /// 调用栈
     stack: Vec<SunPointer>,
+    /// 全局变量表
     value_map: HashMap<String, SunPointer>,
+    /// meta表
     meta_map: HashMap<&'static str, SunObject>,
+    /// 函数表
     function_map: HashMap<String, Vec<Command>>,
+    /// debug 模式标志
     is_debug: bool,
+    /// 检查全局变量表标志
     check_global: bool,
+    /// 检查调用堆栈标志
     check_stack: bool,
 }
 
 impl VirtualMachine {
+    /// 创建新的虚拟机
     pub fn new(is_debug: bool, check_stack: bool, check_global: bool) -> Self {
         let mut vm = VirtualMachine {
             stack: Vec::new(),
@@ -34,10 +43,12 @@ impl VirtualMachine {
             check_global,
             check_stack,
         };
+        // 预导入的模块
         prelude(&mut vm.value_map, &mut vm.meta_map);
         vm
     }
 
+    /// 运行虚拟机 `proto`: 语法分析器
     pub fn run<T: Read>(&mut self, proto: &ParseProto<T>) {
         let mut pc = 1;
         while pc <= proto.commands.len() {
@@ -280,26 +291,31 @@ impl VirtualMachine {
                     }
                 },
             }
-            if self.check_stack == true && self.is_debug == false {
-                println!();
-                debug_output(&self.stack, true);
-                println!();
-            }
-            if self.check_global == true && self.is_debug == false {
-                println!();
-                debug_output(&self.value_map, true);
-                println!()
-            }
-            if self.is_debug == true {
-                println!();
-                debug_output(pc, false);
-                debug_output(command, false);
-                debug_output(&self.stack, true);
-                debug_output(&self.value_map, true);
-                debug_output(&self.meta_map, true);
-                println!();
-            }
+            self.debug(pc, &command);
             pc += 1;
+        }
+    }
+
+    /// debug 模式的打印信息处理 `pc`: 程序计数器 `command`: 当前运行的指令
+    fn debug(&self, pc: usize, command: &Command) {
+        if self.check_stack == true && self.is_debug == false {
+            println!();
+            debug_output(&self.stack, true);
+            println!();
+        }
+        if self.check_global == true && self.is_debug == false {
+            println!();
+            debug_output(&self.value_map, true);
+            println!()
+        }
+        if self.is_debug == true {
+            println!();
+            debug_output(pc, false);
+            debug_output(command, false);
+            debug_output(&self.stack, true);
+            debug_output(&self.value_map, true);
+            debug_output(&self.meta_map, true);
+            println!();
         }
     }
 }

@@ -10,6 +10,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 
+/// 类型数据的容器
 #[derive(Clone)]
 pub enum SunValue {
     Nil,
@@ -71,12 +72,14 @@ impl fmt::Debug for SunValue {
     }
 }
 
+/// `Object` 元数据
 #[derive(Debug, Clone)]
 pub struct SunObject {
     meta: SunMeta,
 }
 
 impl SunObject {
+    /// 新建新的 `Object` 元数据
     pub fn new(name: &'static str) -> SunObject {
         let meta = SunMeta::new(name, HashMap::new());
         let mut obj = SunObject { meta };
@@ -85,6 +88,7 @@ impl SunObject {
     }
 }
 
+/// 获取类型名的类型方法
 pub fn _type() -> Function {
     let f = |value: Vec<SunPointer>| -> Vec<SunPointer> {
         let value = value[0].get();
@@ -94,7 +98,9 @@ pub fn _type() -> Function {
     f
 }
 
+/// 继承自 Object 的特征
 pub trait IsSunObject {
+    /// 有能力生成一个 Object
     fn get_obj(&self) -> SunObject;
 }
 
@@ -108,6 +114,7 @@ impl OwnSunMeta for SunObject {
     }
 }
 
+/// 批量添加类型方法
 #[macro_export]
 macro_rules! add_methods {
     ($obj:expr, $type_name:ty, $(($name:expr, $method:ident)),+) => {

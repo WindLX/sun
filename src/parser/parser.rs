@@ -8,15 +8,21 @@ use crate::utils::{
 use crate::vm::command::Command;
 use std::io::Read;
 
+/// 语法分析器的结构体
 #[derive(Debug)]
 pub struct ParseProto<T: Read> {
+    /// 生成的指令序列
     pub commands: Vec<Command>,
+    /// 词法分析器
     tokenizer: Tokenizer<T>,
+    /// 检查语法树的标志
     check: bool,
+    /// 检查生成命令的标志
     check_command: bool,
 }
 
 impl<T: Read> ParseProto<T> {
+    /// 创建新的语法分析器
     pub fn new(input: T, check_tokenizer: bool, check_parser: bool, check_command: bool) -> Self {
         let mut proto = ParseProto {
             commands: Vec::new(),
@@ -28,6 +34,7 @@ impl<T: Read> ParseProto<T> {
         proto
     }
 
+    /// 进行语法分析
     fn load(&mut self) {
         loop {
             let ast = self.parse_chunk();
@@ -46,7 +53,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // 语句段
+    /// 语句段：定义语段或语句块
     fn parse_chunk(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::DefClass | &Token::DefFunction => self.parse_def(),
@@ -54,7 +61,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // 语句块
+    /// 语句块：流程控制语段或表达式
     fn parse_block(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::If | &Token::Loop => self.parse_control(),
@@ -62,12 +69,12 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // 表达式语句
+    /// 表达式语句
     fn parse_expr(&mut self) -> Box<Expr> {
         self.parse_logic()
     }
 
-    // 流程控制语句
+    /// 流程控制语句
     fn parse_control(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::If => self.parse_if(),
@@ -76,7 +83,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // 定义语句
+    /// 定义语句
     fn parse_def(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::DefClass => self.parse_defclass(),
@@ -85,7 +92,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // and or xor
+    /// and or xor
     fn parse_logic(&mut self) -> Box<Expr> {
         let mut left = self.parse_compare();
         loop {
@@ -111,7 +118,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // compare
+    /// compare
     fn parse_compare(&mut self) -> Box<Expr> {
         let left = self.parse_0();
         match self.tokenizer.peek() {
@@ -149,7 +156,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // add sub and or xor
+    /// add sub and or xor
     fn parse_0(&mut self) -> Box<Expr> {
         let mut left = self.parse_1();
         loop {
@@ -185,7 +192,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // mul div mod
+    /// mul div mod
     fn parse_1(&mut self) -> Box<Expr> {
         let mut left = self.parse_2();
         loop {
@@ -211,7 +218,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // pow
+    /// pow
     fn parse_2(&mut self) -> Box<Expr> {
         let mut left = self.parse_3();
         loop {
@@ -227,7 +234,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // neg not conj
+    /// neg not conj
     fn parse_3(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Sub => {
@@ -246,7 +253,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // fac
+    /// fac
     fn parse_4(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Fac => {
@@ -257,7 +264,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // function call and assign
+    /// function call and assign
     fn parse_5(&mut self) -> Box<Expr> {
         let name = self.parse_6();
         match self.tokenizer.peek() {
@@ -297,7 +304,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // dot index
+    /// dot index
     fn parse_6(&mut self) -> Box<Expr> {
         let mut left = self.parse_7();
         loop {
@@ -323,6 +330,12 @@ impl<T: Read> ParseProto<T> {
                 &Token::SquL => {
                     self.tokenizer.next();
                     match self.tokenizer.peek() {
+                        &Token::Name(ref name) => {
+                            let name = name.clone();
+                            self.tokenizer.next();
+                            let right = Box::new(Expr::Variable(name));
+                            left = Box::new(Expr::Index(left, right));
+                        }
                         &Token::Number(idx) => {
                             self.tokenizer.next();
                             let right = Box::new(Expr::Constant(SunValue::from(idx)));
@@ -350,7 +363,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // name
+    /// name
     fn parse_7(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Name(ref name) => {
@@ -375,7 +388,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // key-value pair
+    /// key-value pair
     fn parse_pair(&mut self) -> Box<Expr> {
         let left = self.parse_expr();
         match self.tokenizer.peek() {
@@ -408,7 +421,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // def class
+    /// def class
     fn parse_defclass(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::DefClass => {
@@ -419,7 +432,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // def function
+    /// def function
     fn parse_deffunc(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::DefClass => {
@@ -430,7 +443,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    // if
+    /// if
     fn parse_if(&mut self) -> Box<Expr> {
         self.expect(Token::If);
         let mut cond = self.parse_logic_unassign();
@@ -466,7 +479,7 @@ impl<T: Read> ParseProto<T> {
         Box::new(Expr::If(cond, thens, elses))
     }
 
-    // loop
+    /// loop
     fn parse_loop(&mut self) -> Box<Expr> {
         self.expect(Token::Loop);
         let mut cond = self.parse_logic_unassign();
@@ -486,7 +499,7 @@ impl<T: Read> ParseProto<T> {
         Box::new(Expr::Loop(cond, bodys))
     }
 
-    // and or xor
+    /// 禁止包含赋值语句的 and or xor
     fn parse_logic_unassign(&mut self) -> Box<Expr> {
         let mut left = self.parse_compare_unassign();
         self.unexpect_assign(&mut left);
@@ -516,7 +529,7 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    // compare
+    /// 禁止包含赋值语句的 compare
     fn parse_compare_unassign(&mut self) -> Box<Expr> {
         let mut left = self.parse_0();
         self.unexpect_assign(&mut left);
@@ -561,6 +574,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
+    /// 原子语句
     fn parse_primary(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Number(ref value) => {
@@ -609,6 +623,7 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
+    /// 检查下一个 `Token` 是否为期望的 `Token`，否则打印错误
     fn expect(&mut self, token: Token) -> Token {
         match self.tokenizer.peek() {
             t if t == &token => self.tokenizer.next().unwrap(),
@@ -621,6 +636,7 @@ impl<T: Read> ParseProto<T> {
         token
     }
 
+    /// 检查当前语句是否不为赋值语句
     fn unexpect_assign(&mut self, expr: &mut Box<Expr>) {
         if let Expr::Assign(_, _) | Expr::TableAssign(_, _) = *(*expr) {
             let e = SunError::SymbolError(format!(

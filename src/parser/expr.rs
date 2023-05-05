@@ -2,6 +2,7 @@ use crate::sun_lib::value::sun_object::SunValue;
 use crate::utils::log::debug_output;
 use crate::vm::command::Command;
 
+/// 语法树节点
 #[derive(Debug, Clone)]
 pub enum Expr {
     Add(Box<Expr>, Box<Expr>),   // 0
@@ -39,6 +40,7 @@ pub enum Expr {
     Loop(Box<Expr>, Vec<Box<Expr>>),
 }
 
+/// 语法树处理中间层
 #[derive(Debug)]
 pub enum Desc {
     Single(String),
@@ -61,6 +63,7 @@ pub enum Desc {
     LoopEnd,
 }
 
+/// 将语法树翻译成虚拟机指令
 pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
     let mut expr_stack: Vec<Desc> = Vec::new();
     traverse_expr(&mut expr_stack, &ast);
@@ -123,6 +126,7 @@ pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
     commands
 }
 
+/// 递归解析语法树，转换成中间层
 fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
     match expr {
         Expr::Add(left, right) => {

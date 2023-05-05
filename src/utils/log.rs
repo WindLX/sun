@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::process;
 
+/// 输出错误信息
 pub fn error_output<E>(error: E) -> !
 where
     E: Error,
@@ -12,6 +13,7 @@ where
     process::exit(0);
 }
 
+/// 输出警告信息
 pub fn warn_output<W>(warn: W)
 where
     W: Display + Debug,
@@ -20,6 +22,7 @@ where
     eprintln!("{}", warn);
 }
 
+/// 输出日志信息
 pub fn log_output<L>(log: L)
 where
     L: Display + Debug,
@@ -28,6 +31,7 @@ where
     eprintln!("{}", log);
 }
 
+/// 输出调试信息
 pub fn debug_output<D>(debug: D, is_pretty: bool)
 where
     D: Debug,

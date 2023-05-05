@@ -12,6 +12,7 @@ use super::super::{
 };
 use crate::add_methods;
 
+/// Nil 的元数据
 #[derive(Clone, Debug)]
 pub struct SunNil {
     obj: SunObject,
@@ -24,6 +25,7 @@ impl IsSunObject for SunNil {
 }
 
 impl SunNil {
+    /// 创建新的 Nil 元数据
     pub fn new() -> SunNil {
         let mut obj = SunObject::new("nil");
         add_methods!(
@@ -46,6 +48,7 @@ impl SunNil {
     }
 }
 
+/// 批量处理 Nil 的运算符
 macro_rules! nil_op {
     () => {{
         let f = |_: Vec<SunPointer>| vec![SunPointer::new(SunValue::Nil)];
@@ -53,6 +56,7 @@ macro_rules! nil_op {
     }};
 }
 
+/// 批量处理 Nil 的比较运算符
 macro_rules! nil_compare {
     () => {{
         let f = |_: Vec<SunPointer>| vec![SunPointer::new(SunValue::from(false))];

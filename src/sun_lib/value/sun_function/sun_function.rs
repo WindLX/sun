@@ -6,22 +6,21 @@ use super::super::{
 use crate::{add_methods, sun_lib::value::sun_meta::OwnSunMeta};
 use std::fmt;
 
+/// Function 的数据(基于Rust)
 pub type Function = fn(Vec<SunPointer>) -> Vec<SunPointer>;
 
+/// Function 元数据
 #[derive(Clone)]
 pub struct SunFunction {
     obj: SunObject,
 }
 
 impl SunFunction {
+    /// 创建新的 Function 元数据
     pub fn new() -> Self {
         let mut obj = SunObject::new("function");
         add_methods!(obj, SunFunction, ("call", call));
         SunFunction { obj }
-    }
-
-    pub fn as_ptr(&self) -> *const SunFunction {
-        self as *const SunFunction
     }
 }
 
@@ -49,6 +48,6 @@ impl CallAble for SunFunction {
 
 impl fmt::Debug for SunFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<function: {:p}>", self.as_ptr())
+        write!(f, "<function>")
     }
 }

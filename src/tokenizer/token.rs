@@ -1,3 +1,4 @@
+/// Sun 的 最小语法单元
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     // keywords

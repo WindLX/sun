@@ -8,8 +8,8 @@ use std::io::{BufReader, Write};
 use std::process;
 use std::{env, io};
 
-/*
-    程序运行函数
+/**
+    sun 解释器程序运行的入口函数
 */
 pub fn run() {
     let (args, config) = get_config();
@@ -54,10 +54,10 @@ pub fn run() {
     }
 }
 
-/*
-    处理运行时的配置
-    return:
-        (Vec<String>, Config): 剩余的命令参数和配置
+/**
+    `get_config` 处理运行时的配置，捕获命令行参数，生成配置，同时将配置参数从命令行参数容器中去除
+
+    `return`: 去除配置后剩余的命令行参数
 */
 fn get_config() -> (Vec<String>, Config) {
     let mut config = Config::new();

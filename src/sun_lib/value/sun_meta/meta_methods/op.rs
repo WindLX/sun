@@ -1,6 +1,7 @@
 use super::super::super::sun_function::Function;
 use super::super::super::sun_object::IsSunObject;
 
+/// `+`
 pub trait AddAble
 where
     Self: IsSunObject,
@@ -8,6 +9,7 @@ where
     fn add() -> Function;
 }
 
+/// `-` 二元操作
 pub trait SubAble
 where
     Self: IsSunObject,
@@ -15,6 +17,7 @@ where
     fn sub() -> Function;
 }
 
+/// `*` 二元操作
 pub trait MulAble
 where
     Self: IsSunObject,
@@ -22,6 +25,7 @@ where
     fn mul() -> Function;
 }
 
+/// `/`
 pub trait DivAble
 where
     Self: IsSunObject,
@@ -29,6 +33,7 @@ where
     fn div() -> Function;
 }
 
+/// `%`
 pub trait RemAble
 where
     Self: IsSunObject,
@@ -36,6 +41,7 @@ where
     fn rem() -> Function;
 }
 
+/// `^`
 pub trait PowAble
 where
     Self: IsSunObject,
@@ -43,6 +49,7 @@ where
     fn pow() -> Function;
 }
 
+/// `!` 一元操作
 pub trait FacAble
 where
     Self: IsSunObject,
@@ -50,6 +57,7 @@ where
     fn fac() -> Function;
 }
 
+/// `-` 一元操作
 pub trait NegAble
 where
     Self: IsSunObject,
@@ -57,6 +65,7 @@ where
     fn neg() -> Function;
 }
 
+/// `*` 一元操作
 pub trait ConjAble
 where
     Self: IsSunObject,
@@ -64,6 +73,7 @@ where
     fn conj() -> Function;
 }
 
+/// `&&`
 pub trait AndAble
 where
     Self: IsSunObject,
@@ -71,6 +81,7 @@ where
     fn and() -> Function;
 }
 
+/// `||`
 pub trait OrAble
 where
     Self: IsSunObject,
@@ -78,6 +89,7 @@ where
     fn or() -> Function;
 }
 
+/// `~`
 pub trait NotAble
 where
     Self: IsSunObject,
@@ -85,6 +97,7 @@ where
     fn not() -> Function;
 }
 
+/// `^^`
 pub trait XorAble
 where
     Self: IsSunObject,
@@ -92,18 +105,26 @@ where
     fn xor() -> Function;
 }
 
+/// 是否可比较
 pub trait CompareAble
 where
     Self: IsSunObject,
 {
+    /// `<`
     fn less() -> Function;
+    /// `>`
     fn greater() -> Function;
+    /// `==`
     fn eq() -> Function;
+    /// `~=`
     fn noteq() -> Function;
+    /// `>=`
     fn ge() -> Function;
+    /// `<=`
     fn le() -> Function;
 }
 
+/// 是否可用 `()` 进行处理
 pub trait CallAble
 where
     Self: IsSunObject,
@@ -111,6 +132,7 @@ where
     fn call() -> Function;
 }
 
+/// 批量处理 Number 的二元操作符
 #[macro_export]
 macro_rules! double_op {
     ($op:tt) => {{
@@ -133,6 +155,7 @@ macro_rules! double_op {
     }};
 }
 
+/// 批量处理 Number 的一元操作符
 #[macro_export]
 macro_rules! single_op {
     ($op:tt) => {{
@@ -153,6 +176,7 @@ macro_rules! single_op {
     }};
 }
 
+/// 批量处理 Bool 的二元操作符
 #[macro_export]
 macro_rules! double_op_b {
     ($op:tt) => {{
@@ -175,6 +199,7 @@ macro_rules! double_op_b {
     }};
 }
 
+/// 批量处理 Bool 的一元操作符
 #[macro_export]
 macro_rules! single_op_b {
     ($op:tt) => {{
@@ -195,6 +220,7 @@ macro_rules! single_op_b {
     }};
 }
 
+/// 批量处理 Bool 的比较操作符
 #[macro_export]
 macro_rules! compare_op_b {
     ($op:tt) => {{
@@ -215,6 +241,7 @@ macro_rules! compare_op_b {
     }};
 }
 
+/// 批量处理 Number 的比较操作符
 #[macro_export]
 macro_rules! compare_op {
     ($op:tt) => {{

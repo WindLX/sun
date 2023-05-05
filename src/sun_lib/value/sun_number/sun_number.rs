@@ -14,6 +14,7 @@ use crate::utils::{
 use crate::{add_methods, compare_op, double_op, single_op};
 use colorized::*;
 
+/// Number 元数据
 #[derive(Clone, Debug)]
 pub struct SunNumber {
     obj: SunObject,
@@ -26,6 +27,7 @@ impl IsSunObject for SunNumber {
 }
 
 impl SunNumber {
+    /// 创建新的 Number 元数据
     pub fn new() -> SunNumber {
         let mut obj = SunObject::new("number");
         add_methods!(

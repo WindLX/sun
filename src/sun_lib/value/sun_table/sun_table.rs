@@ -13,6 +13,7 @@ use colorized::*;
 use std::collections::HashMap;
 use std::fmt;
 
+/// `Table` 类型的数据容器
 #[derive(Clone)]
 pub struct Table {
     array: Vec<SunPointer>,
@@ -20,6 +21,7 @@ pub struct Table {
 }
 
 impl Table {
+    /// 新建新的 `Table` 容器
     pub fn new() -> Self {
         Table {
             array: Vec::new(),
@@ -27,14 +29,22 @@ impl Table {
         }
     }
 
+    /// 向数组添加新值
     pub fn append(&mut self, value: SunValue) {
         self.array.push(SunPointer::new(value))
     }
 
+    /// 向数组中指定索引处插入新值
+    pub fn insert(&mut self, index: usize, value: SunValue) {
+        self.array.insert(index, SunPointer::new(value))
+    }
+
+    /// 向字典添加新键值对
     pub fn append_kv(&mut self, key: String, value: SunValue) {
         self.dict.insert(key, SunPointer::new(value));
     }
 
+    /// 按索引获取内容的指针，引用计数增加
     pub fn get_by_idx(&self, idx: usize) -> Option<SunPointer> {
         match self.array.get(idx) {
             Some(value) => Some(value.clone()),
@@ -42,6 +52,7 @@ impl Table {
         }
     }
 
+    /// 按键获取内容的指针，引用计数增加
     pub fn get_by_key(&self, key: &str) -> Option<SunPointer> {
         match self.dict.get(key) {
             Some(value) => Some(value.clone()),
@@ -49,6 +60,7 @@ impl Table {
         }
     }
 
+    /// 按索引移除内容的指针
     pub fn remove_by_idx(&mut self, idx: usize) -> Option<SunPointer> {
         if self.array.len() <= idx {
             None
@@ -57,34 +69,41 @@ impl Table {
         }
     }
 
+    /// 按键移除内容的指针
     pub fn remove_by_key(&mut self, key: &str) -> Option<SunPointer> {
         self.dict.remove(key)
     }
 
+    /// 合并两个 `Table` 的字典
     pub fn extend(&mut self, other: Table) {
         self.dict.extend(other.dict)
     }
 
+    /// 合并两个 `Table` 的数组
     pub fn extend_array(&mut self, other: Table) {
         self.array.extend(other.array)
     }
 
+    /// 获取数组长度
     pub fn alen(&self) -> SunPointer {
         let n = self.array.len();
         SunPointer::new(SunValue::from(n as f64))
     }
 
+    /// 获取字典长度
     pub fn dlen(&self) -> SunPointer {
         let n = self.dict.len();
         SunPointer::new(SunValue::from(n as f64))
     }
 
+    /// 获取总长度
     pub fn len(&self) -> SunPointer {
         let n = self.dict.len() + self.array.len();
         SunPointer::new(SunValue::from(n as f64))
     }
 }
 
+/// `Table` 类型的元数据
 #[derive(Clone, Debug)]
 pub struct SunTable {
     obj: SunObject,
@@ -97,6 +116,7 @@ impl IsSunObject for SunTable {
 }
 
 impl SunTable {
+    /// 新建 `Table` 元数据
     pub fn new() -> SunTable {
         let mut obj = SunObject::new("table");
         add_methods!(obj, SunTable, ("index", index));
@@ -104,6 +124,8 @@ impl SunTable {
         obj.set_method("push", push());
         obj.set_method("insert", insert());
         obj.set_method("extend", extend());
+        obj.set_method("aextend", aextend());
+        obj.set_method("dextend", dextend());
         obj.set_method("alen", alen());
         obj.set_method("dlen", dlen());
         obj.set_method("len", len());
@@ -111,11 +133,12 @@ impl SunTable {
     }
 }
 
+/// 从 `Table` 中按索引和键移除多个值
 fn remove() -> Function {
     let f = |mut args: Vec<SunPointer>| {
         if args.len() <= 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -164,11 +187,12 @@ fn remove() -> Function {
     f
 }
 
+/// 向 `Table` 的数组中追加多个值
 fn push() -> Function {
     let f = |mut args: Vec<SunPointer>| {
         if args.len() <= 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -185,11 +209,12 @@ fn push() -> Function {
     f
 }
 
+/// 向 `Table` 中插入新值
 fn insert() -> Function {
     let f = |mut args: Vec<SunPointer>| {
         if args.len() <= 2 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -206,6 +231,16 @@ fn insert() -> Function {
                     }
                     t.append_kv((&key).into(), value)
                 }
+                (SunValue::Number(index), value) => {
+                    if index < 0.0 {
+                        let e = SunError::ParaError(format!("negative can't be index"));
+                        error_output(e);
+                    }
+                    if index.fract() != 0.0 {
+                        warn_output(format!("parameter is not an integer so it's decimal part will be truncated as an index").color(Colors::YellowFg));
+                    }
+                    t.insert(index as usize, value)
+                }
                 (other, _) => {
                     let e = SunError::KeyError(format!("invalid key `{other}`"));
                     error_output(e);
@@ -217,11 +252,12 @@ fn insert() -> Function {
     f
 }
 
+/// 合并两个 `Table`
 fn extend() -> Function {
     let f = |mut args: Vec<SunPointer>| {
         if args.len() <= 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -244,11 +280,64 @@ fn extend() -> Function {
     f
 }
 
+/// 合并两个 `Table` 的数组部分
+fn aextend() -> Function {
+    let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 1 {
+            {
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args.remove(0);
+        let mut t = p.borrow_mut();
+        if let SunValue::Table(t) = &mut *t {
+            match args[0].get() {
+                SunValue::Table(t2) => t.extend_array(t2.clone()),
+                other => {
+                    let e = SunError::ParaError(format!("expect `table` but got `{other}`"));
+                    error_output(e);
+                }
+            }
+        }
+        vec![]
+    };
+    f
+}
+
+/// 合并两个 `Table` 的字典部分
+fn dextend() -> Function {
+    let f = |mut args: Vec<SunPointer>| {
+        if args.len() <= 1 {
+            {
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
+                error_output(e);
+            }
+        }
+        let p = args.remove(0);
+        let mut t = p.borrow_mut();
+        if let SunValue::Table(t) = &mut *t {
+            match args[0].get() {
+                SunValue::Table(t2) => {
+                    t.extend(t2.clone());
+                }
+                other => {
+                    let e = SunError::ParaError(format!("expect `table` but got `{other}`"));
+                    error_output(e);
+                }
+            }
+        }
+        vec![]
+    };
+    f
+}
+
+/// 获取 `Table` 数组部分长度
 fn alen() -> Function {
     let f = |args: Vec<SunPointer>| {
         if args.len() < 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -264,11 +353,12 @@ fn alen() -> Function {
     f
 }
 
+/// 获取 `Table` 字典部分长度
 fn dlen() -> Function {
     let f = |args: Vec<SunPointer>| {
         if args.len() < 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
@@ -284,11 +374,12 @@ fn dlen() -> Function {
     f
 }
 
+/// 获取 `Table` 总长度
 fn len() -> Function {
     let f = |args: Vec<SunPointer>| {
         if args.len() < 1 {
             {
-                let e = SunError::CallError(format!("the number of parameters is too few"));
+                let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);
             }
         }
