@@ -1,0 +1,14 @@
+[package]
+name = "math"
+version = "0.1.0"
+author = "windlx"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sun_core = { path="../../sun_core" }
+
+[lib]
+name = "math"
+crate-type = ["dylib"]

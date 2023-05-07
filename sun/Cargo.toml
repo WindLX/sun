@@ -1,0 +1,13 @@
+[package]
+name = "sun"
+version = "0.3.0"
+author = "windlx"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sun_core = { path = "../sun_core" }
+serde = "1.0.152"
+colorized = "1.0.0"
+libloading = "0.7.4"
