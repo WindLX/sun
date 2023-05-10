@@ -1,27 +1,27 @@
 use std::fmt;
-use sun_core::utils::{IsSunObject, SunObject};
+use sun_core::meta::{OwnSunMeta, SunBase, SunMeta};
 
 /// Function 元数据
 #[derive(Clone)]
 pub struct SunFunction {
-    obj: SunObject,
+    meta: SunMeta,
 }
 
 impl SunFunction {
     /// 创建新的 Function 元数据
     pub fn new() -> Self {
-        let obj = SunObject::new("function");
-        SunFunction { obj }
+        let meta = SunMeta::new("function", SunBase::Object);
+        SunFunction { meta }
     }
 }
 
-impl IsSunObject for SunFunction {
-    fn get_obj(&self) -> &SunObject {
-        &self.obj
+impl OwnSunMeta for SunFunction {
+    fn get_meta(&self) -> &SunMeta {
+        &self.meta
     }
 
-    fn get_mut_obj(&mut self) -> &mut SunObject {
-        &mut self.obj
+    fn get_meta_mut(&mut self) -> &mut SunMeta {
+        &mut self.meta
     }
 }
 

@@ -1,46 +1,49 @@
 use colorized::*;
 use sun_core::{
-    add_methods,
+    add_meta_methods, add_methods,
     container::{Function, RustFunction, SunValue},
-    meta::{meta_methods::container::IndexAble, OwnSunMeta},
+    meta::{meta_methods::container::IndexAble, OwnSunMeta, SunBase, SunMeta},
     utils::{
         log::{error_output, warn_output},
-        IsSunObject, SunError, SunObject, SunPointer,
+        SunError, SunPointer,
     },
 };
 
 /// `Table` 类型的元数据
 #[derive(Clone, Debug)]
 pub struct SunTable {
-    obj: SunObject,
+    meta: SunMeta,
 }
 
-impl IsSunObject for SunTable {
-    fn get_obj(&self) -> &SunObject {
-        &self.obj
+impl OwnSunMeta for SunTable {
+    fn get_meta(&self) -> &SunMeta {
+        &self.meta
     }
 
-    fn get_mut_obj(&mut self) -> &mut SunObject {
-        &mut self.obj
+    fn get_meta_mut(&mut self) -> &mut SunMeta {
+        &mut self.meta
     }
 }
 
 impl SunTable {
     /// 新建 `Table` 元数据
     pub fn new() -> SunTable {
-        let mut obj = SunObject::new("table");
-        add_methods!(obj, SunTable, ("index", index));
-        obj.set_method("remove", remove());
-        obj.set_method("push", push());
-        obj.set_method("insert", insert());
-        obj.set_method("extend", extend());
-        obj.set_method("aextend", aextend());
-        obj.set_method("dextend", dextend());
-        obj.set_method("alen", alen());
-        obj.set_method("dlen", dlen());
-        obj.set_method("len", len());
-        obj.set_method("clone", clone());
-        SunTable { obj }
+        let mut meta = SunMeta::new("table", SunBase::Object);
+        add_meta_methods!(meta, SunTable, ("index", index));
+        add_methods!(
+            meta,
+            ("remove", remove),
+            ("push", push),
+            ("insert", insert),
+            ("extend", extend),
+            ("aextend", aextend),
+            ("dextend", dextend),
+            ("alen", alen),
+            ("dlen", dlen),
+            ("len", len),
+            ("clone", clone)
+        );
+        SunTable { meta }
     }
 }
 

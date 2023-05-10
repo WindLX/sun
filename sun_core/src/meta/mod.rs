@@ -1,4 +1,4 @@
 pub mod meta;
 pub mod meta_methods;
 
-pub use meta::{OwnSunMeta, SunMeta};
+pub use meta::{OwnSunMeta, SunBase, SunMeta};

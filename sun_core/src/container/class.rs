@@ -1,23 +1,25 @@
-use crate::{sunc::sun_struct::*, utils::SunPointer};
+use crate::utils::SunPointer;
 use std::collections::HashMap;
-use std::ffi::CStr;
 
 /// `Class` 类型的数据容器
 #[derive(Debug, Clone)]
 pub struct Class {
-    name: &'static str,
+    name: String,
     attributes: HashMap<String, SunPointer>,
 }
 
 impl Class {
     /// 创建新的类数据 容器
-    pub fn new(name: &'static str, attributes: HashMap<String, SunPointer>) -> Self {
-        Class { name, attributes }
+    pub fn new(name: &str, attributes: HashMap<String, SunPointer>) -> Self {
+        Class {
+            name: name.to_string(),
+            attributes,
+        }
     }
 
     /// 获取类名
     pub fn get_name(&self) -> &str {
-        self.name
+        self.name.as_str()
     }
 
     /// 设置属性
@@ -34,26 +36,22 @@ impl Class {
     pub fn get_attribute(&self, attr_name: &str) -> Option<SunPointer> {
         self.attributes.get(attr_name).cloned()
     }
-
-    pub fn get_all(&self) -> HashMap<String, SunPointer> {
-        self.attributes.clone()
-    }
 }
 
-impl From<ClassC> for Class {
-    fn from(value: ClassC) -> Self {
-        let name = unsafe { CStr::from_ptr(value.name).to_string_lossy().into_owned() };
-        let name: &'static str = Box::leak(name.into_boxed_str());
-        let mut attr = HashMap::new();
-        for j in 0..value.attr_len {
-            let p = unsafe { &*value.attributes.offset(j as isize) };
-            let v = unsafe { &*(*(*p).pointer).data };
-            let k = unsafe { CStr::from_ptr((*p).key).to_string_lossy().into_owned() };
-            attr.insert(k, SunPointer::new(v.clone().into()));
-        }
-        Class {
-            name,
-            attributes: attr,
-        }
-    }
-}
+// impl From<ClassC> for Class {
+//     fn from(value: ClassC) -> Self {
+//         let name = unsafe { CStr::from_ptr(value.name).to_string_lossy().into_owned() };
+//         let name: &'static str = Box::leak(name.into_boxed_str());
+//         let mut attr = HashMap::new();
+//         for j in 0..value.attr_len {
+//             let p = unsafe { &*value.attributes.offset(j as isize) };
+//             let v = unsafe { &*(*(*p).pointer).data };
+//             let k = unsafe { CStr::from_ptr((*p).key).to_string_lossy().into_owned() };
+//             attr.insert(k, SunPointer::new(v.clone().into()));
+//         }
+//         Class {
+//             name,
+//             attributes: attr,
+//         }
+//     }
+// }

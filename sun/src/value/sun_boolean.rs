@@ -1,36 +1,26 @@
 use crate::{compare_op_b, double_op_b, single_op_b};
 use sun_core::{
-    add_methods,
+    add_meta_methods,
     container::{Function, RustFunction, SunValue},
     meta::{
         meta_methods::op::{AndAble, CompareAble, NotAble, OrAble, XorAble},
-        OwnSunMeta,
+        OwnSunMeta, SunBase, SunMeta,
     },
-    utils::{IsSunObject, SunObject, SunPointer},
+    utils::SunPointer,
 };
 
 /// Bool 元数据
 #[derive(Clone, Debug)]
 pub struct SunBoolean {
-    obj: SunObject,
-}
-
-impl IsSunObject for SunBoolean {
-    fn get_obj(&self) -> &SunObject {
-        &self.obj
-    }
-
-    fn get_mut_obj(&mut self) -> &mut SunObject {
-        &mut self.obj
-    }
+    meta: SunMeta,
 }
 
 impl SunBoolean {
     /// 创建新的 Bool 元数据
     pub fn new() -> SunBoolean {
-        let mut obj = SunObject::new("bool");
-        add_methods!(
-            obj,
+        let mut meta = SunMeta::new("bool", SunBase::Object);
+        add_meta_methods!(
+            meta,
             SunBoolean,
             ("and", and),
             ("or", or),
@@ -43,7 +33,17 @@ impl SunBoolean {
             ("greater", greater),
             ("less", less)
         );
-        SunBoolean { obj }
+        SunBoolean { meta }
+    }
+}
+
+impl OwnSunMeta for SunBoolean {
+    fn get_meta(&self) -> &SunMeta {
+        &self.meta
+    }
+
+    fn get_meta_mut(&mut self) -> &mut SunMeta {
+        &mut self.meta
     }
 }
 

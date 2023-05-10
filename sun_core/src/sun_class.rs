@@ -1,35 +1,42 @@
 use crate::{
-    container::Function,
-    meta::OwnSunMeta,
-    sunc::tran::ExportLib,
-    utils::object::{IsSunObject, SunObject},
+    meta::{OwnSunMeta, SunBase, SunMeta},
+    utils::{object::SunObject, SunPointer},
 };
 use std::collections::HashMap;
 
 /// `Class` 类型的元数据
 #[derive(Clone)]
 pub struct SunClass {
-    obj: SunObject,
+    meta: SunMeta,
 }
 
 impl SunClass {
     /// 新建 `Class` 元数据
-    pub fn new(class_name: &'static str, methods: HashMap<String, Function>) -> SunClass {
-        let mut obj = SunObject::new(class_name);
-        methods
-            .into_iter()
-            .for_each(|(name, method)| obj.set_method(name.as_str(), method));
-        SunClass { obj }
+    pub fn new(class_name: &str, base: SunBase) -> SunClass {
+        let meta = SunMeta::new(class_name, base);
+        SunClass { meta }
     }
 }
 
-impl IsSunObject for SunClass {
-    fn get_obj(&self) -> &SunObject {
-        &self.obj
+impl OwnSunMeta for SunClass {
+    fn get_meta(&self) -> &SunMeta {
+        &self.meta
     }
 
-    fn get_mut_obj(&mut self) -> &mut SunObject {
-        &mut self.obj
+    fn get_meta_mut(&mut self) -> &mut SunMeta {
+        &mut self.meta
+    }
+}
+
+#[derive(Debug)]
+pub struct ExportLib {
+    pub meta: HashMap<String, SunObject>,
+    pub value: HashMap<String, SunPointer>,
+}
+
+impl ExportLib {
+    pub fn new(meta: HashMap<String, SunObject>, value: HashMap<String, SunPointer>) -> Self {
+        ExportLib { meta, value }
     }
 }
 

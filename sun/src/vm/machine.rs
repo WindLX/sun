@@ -1,15 +1,13 @@
 use crate::{parser::parser::ParseProto, prelude::prelude, vm::command::Command};
-use libloading::Library;
 use std::collections::HashMap;
 use std::io::Read;
 use sun_core::{
     container::{Function, SunValue, Table},
-    meta::OwnSunMeta,
-    sunc::{sun_struct::ExportLibC, tran},
+    meta::SunMeta,
     utils::{
-        log::{debug_output, error_output, log_output},
+        log::{debug_output, error_output, log_output, warn_output},
         machine::IsMachine,
-        SunError, SunObject, SunPointer,
+        SunError, SunPointer,
     },
 };
 
@@ -22,7 +20,7 @@ pub struct VirtualMachine<'a> {
     /// 临时变量表
     // temp_map: HashMap<String, SunPointer>,
     /// meta表
-    meta_map: HashMap<&'a str, SunObject>,
+    meta_map: HashMap<&'a str, SunMeta>,
     /// 函数表
     // function_map: HashMap<String, Vec<Command>>,
     /// debug 模式标志
@@ -162,10 +160,12 @@ impl<'a> VirtualMachine<'a> {
                     }
                 }
                 Command::StoreGlobal(name) => {
-                    self.value_map.insert(
-                        name.to_string(),
-                        self.stack.pop().unwrap_or(SunPointer::new(SunValue::Nil)),
-                    );
+                    match self.stack.pop() {
+                        Some(value) => {
+                            self.value_map.insert(name.to_string(), value);
+                        }
+                        None => warn_output("Nil value will not be insert into global value map"),
+                    };
                 }
                 Command::TestJump(jump) => match self.stack.pop() {
                     Some(p) => {
@@ -327,40 +327,7 @@ impl<'a> VirtualMachine<'a> {
     }
 
     pub fn include(&mut self, lib_name: &str) {
-        unsafe {
-            let lib = Library::new(format!("{lib_name}.dll"));
-            match lib {
-                Ok(lib) => {
-                    let import_libc: Result<
-                        libloading::Symbol<unsafe extern "C" fn() -> ExportLibC>,
-                        libloading::Error,
-                    > = lib.get(b"export_libc");
-                    match import_libc {
-                        Ok(import_libc) => {
-                            let import_lib = tran::to_rust(import_libc());
-                            let (meta, value) = (import_lib.meta, import_lib.value);
-                            let meta: HashMap<&'static str, SunObject> = meta
-                                .into_iter()
-                                .map(|(key, value)| {
-                                    let key: &'static str = Box::leak(key.into_boxed_str());
-                                    (key, value)
-                                })
-                                .collect();
-                            self.meta_map.extend(meta);
-                            self.value_map.extend(value);
-                        }
-                        Err(e) => {
-                            let e = SunError::InputError(e.to_string());
-                            error_output(e);
-                        }
-                    }
-                }
-                Err(e) => {
-                    let e = SunError::InputError(e.to_string());
-                    error_output(e);
-                }
-            }
-        }
+        dbg!(lib_name);
     }
 }
 

@@ -1,9 +1,9 @@
-use crate::{container::Function, utils::IsSunObject};
+use crate::{container::Function, meta::OwnSunMeta};
 
 /// 是否可用 `()` 进行处理
 pub trait CallAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn call(&self) -> Function;
 }

@@ -9,17 +9,18 @@ use std::{collections::HashMap, process};
 use sun_core::{
     add_metas,
     container::{Function, RustFunction, SunValue, SysFunction},
+    meta::SunMeta,
     utils::{
         log::{error_output, log_output, warn_output},
         object::_type,
-        IsMachine, IsSunObject, SunError, SunObject, SunPointer,
+        IsMachine, SunError, SunPointer,
     },
 };
 
 /// 预导入
 pub fn prelude(
     value_map: &mut HashMap<String, SunPointer>,
-    meta_map: &mut HashMap<&'static str, SunObject>,
+    meta_map: &mut HashMap<&'static str, SunMeta>,
 ) {
     add_metas!(
         meta_map,

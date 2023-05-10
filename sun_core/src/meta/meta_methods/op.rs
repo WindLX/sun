@@ -1,9 +1,9 @@
-use crate::{container::Function, utils::IsSunObject};
+use crate::{container::Function, meta::OwnSunMeta};
 
 /// `+`
 pub trait AddAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn add() -> Function;
 }
@@ -11,7 +11,7 @@ where
 /// `-` 二元操作
 pub trait SubAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn sub() -> Function;
 }
@@ -19,7 +19,7 @@ where
 /// `*` 二元操作
 pub trait MulAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn mul() -> Function;
 }
@@ -27,7 +27,7 @@ where
 /// `/`
 pub trait DivAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn div() -> Function;
 }
@@ -35,7 +35,7 @@ where
 /// `%`
 pub trait RemAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn rem() -> Function;
 }
@@ -43,7 +43,7 @@ where
 /// `^`
 pub trait PowAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn pow() -> Function;
 }
@@ -51,7 +51,7 @@ where
 /// `!` 一元操作
 pub trait FacAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn fac() -> Function;
 }
@@ -59,7 +59,7 @@ where
 /// `-` 一元操作
 pub trait NegAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn neg() -> Function;
 }
@@ -67,7 +67,7 @@ where
 /// `*` 一元操作
 pub trait ConjAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn conj() -> Function;
 }
@@ -75,7 +75,7 @@ where
 /// `&&`
 pub trait AndAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn and() -> Function;
 }
@@ -83,7 +83,7 @@ where
 /// `||`
 pub trait OrAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn or() -> Function;
 }
@@ -91,7 +91,7 @@ where
 /// `~`
 pub trait NotAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn not() -> Function;
 }
@@ -99,7 +99,7 @@ where
 /// `^^`
 pub trait XorAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     fn xor() -> Function;
 }
@@ -107,7 +107,7 @@ where
 /// 是否可比较
 pub trait CompareAble
 where
-    Self: IsSunObject,
+    Self: OwnSunMeta,
 {
     /// `<`
     fn less() -> Function;

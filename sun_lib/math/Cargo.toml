@@ -8,7 +8,4 @@ edition = "2021"
 
 [dependencies]
 sun_core = { path="../../sun_core" }
-
-[lib]
-name = "math"
-crate-type = ["dylib"]
+bincode = "1.3.3"

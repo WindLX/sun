@@ -6,5 +6,5 @@ pub mod sun_pointer;
 
 pub use err::SunError;
 pub use machine::IsMachine;
-pub use object::{IsSunObject, SunObject};
+pub use object::SunObject;
 pub use sun_pointer::SunPointer;

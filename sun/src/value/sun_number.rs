@@ -1,42 +1,42 @@
 use crate::{compare_op, double_op, single_op};
 use colorized::*;
 use sun_core::{
-    add_methods,
+    add_meta_methods,
     container::{Function, RustFunction, SunValue},
     meta::{
         meta_methods::op::{
             AddAble, CompareAble, DivAble, FacAble, MulAble, NegAble, PowAble, RemAble, SubAble,
         },
-        OwnSunMeta,
+        OwnSunMeta, SunBase, SunMeta,
     },
     utils::{
         log::{error_output, warn_output},
-        IsSunObject, SunError, SunObject, SunPointer,
+        SunError, SunPointer,
     },
 };
 
 /// Number 元数据
 #[derive(Clone, Debug)]
 pub struct SunNumber {
-    obj: SunObject,
+    meta: SunMeta,
 }
 
-impl IsSunObject for SunNumber {
-    fn get_obj(&self) -> &SunObject {
-        &self.obj
+impl OwnSunMeta for SunNumber {
+    fn get_meta(&self) -> &SunMeta {
+        &self.meta
     }
 
-    fn get_mut_obj(&mut self) -> &mut SunObject {
-        &mut self.obj
+    fn get_meta_mut(&mut self) -> &mut SunMeta {
+        &mut self.meta
     }
 }
 
 impl SunNumber {
     /// 创建新的 Number 元数据
     pub fn new() -> SunNumber {
-        let mut obj = SunObject::new("number");
-        add_methods!(
-            obj,
+        let mut meta = SunMeta::new("number", SunBase::Object);
+        add_meta_methods!(
+            meta,
             SunNumber,
             ("add", add),
             ("sub", sub),
@@ -53,7 +53,7 @@ impl SunNumber {
             ("greater", greater),
             ("less", less)
         );
-        SunNumber { obj }
+        SunNumber { meta }
     }
 }
 

@@ -1,7 +1,6 @@
-use crate::{container::SunValue, sunc::sun_struct::*, utils::SunPointer};
+use crate::{container::SunValue, utils::SunPointer};
 use colorized::*;
 use std::collections::HashMap;
-use std::ffi::CStr;
 use std::fmt;
 
 /// `Table` 类型的数据容器
@@ -18,14 +17,6 @@ impl Table {
             array: Vec::new(),
             dict: HashMap::new(),
         }
-    }
-
-    pub fn get_dict(&self) -> HashMap<String, SunPointer> {
-        self.dict.clone()
-    }
-
-    pub fn get_array(&self) -> Vec<SunPointer> {
-        self.array.clone()
     }
 
     /// 向数组添加新值
@@ -188,21 +179,21 @@ impl PartialEq for Table {
 
 impl Eq for Table {}
 
-impl From<TableC> for Table {
-    fn from(value: TableC) -> Self {
-        let mut array = Vec::new();
-        let mut dict = HashMap::new();
-        for i in 0..value.array_len {
-            let p = unsafe { &*value.array.offset(i as isize) };
-            let v = unsafe { &*(*p).data };
-            array.push(SunPointer::new(v.clone().into()))
-        }
-        for j in 0..value.dict_len {
-            let p = unsafe { &*value.dict.offset(j as isize) };
-            let v = unsafe { &*(*(*p).pointer).data };
-            let k = unsafe { CStr::from_ptr((*p).key).to_string_lossy().into_owned() };
-            dict.insert(k, SunPointer::new(v.clone().into()));
-        }
-        Table { array, dict }
-    }
-}
+// impl From<TableC> for Table {
+//     fn from(value: TableC) -> Self {
+//         let mut array = Vec::new();
+//         let mut dict = HashMap::new();
+//         for i in 0..value.array_len {
+//             let p = unsafe { &*value.array.offset(i as isize) };
+//             let v = unsafe { &*(*p).data };
+//             array.push(SunPointer::new(v.clone().into()))
+//         }
+//         for j in 0..value.dict_len {
+//             let p = unsafe { &*value.dict.offset(j as isize) };
+//             let v = unsafe { &*(*(*p).pointer).data };
+//             let k = unsafe { CStr::from_ptr((*p).key).to_string_lossy().into_owned() };
+//             dict.insert(k, SunPointer::new(v.clone().into()));
+//         }
+//         Table { array, dict }
+//     }
+// }

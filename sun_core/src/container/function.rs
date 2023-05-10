@@ -1,7 +1,4 @@
-use crate::{
-    sunc::sun_struct::{FunctionC, FunctionType},
-    utils::{IsMachine, SunPointer},
-};
+use crate::utils::{IsMachine, SunPointer};
 use std::fmt;
 
 /// Function 的数据
@@ -23,18 +20,18 @@ impl From<SysFunction> for Function {
     }
 }
 
-impl From<FunctionC> for Function {
-    fn from(value: FunctionC) -> Self {
-        match value._type {
-            FunctionType::RustFunction => {
-                Function::from(unsafe { *(value.data.rust_function as *const RustFunction) })
-            }
-            FunctionType::SysFunction => {
-                Function::from(unsafe { *(value.data.sys_function as *const SysFunction) })
-            }
-        }
-    }
-}
+// impl From<FunctionC> for Function {
+//     fn from(value: FunctionC) -> Self {
+//         match value._type {
+//             FunctionType::RustFunction => {
+//                 Function::from(unsafe { *(value.data.rust_function as *const RustFunction) })
+//             }
+//             FunctionType::SysFunction => {
+//                 Function::from(unsafe { *(value.data.sys_function as *const SysFunction) })
+//             }
+//         }
+//     }
+// }
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

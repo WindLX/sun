@@ -1,11 +1,9 @@
 use crate::{
     container::{Class, Function, RustFunction, SysFunction, Table},
-    sunc::sun_struct::{SunValueC, SunValueType},
     utils::{log::error_output, SunError},
 };
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::ffi::CStr;
 use std::fmt;
 
 /// 类型数据的容器
@@ -134,30 +132,30 @@ impl From<Class> for SunValue {
     }
 }
 
-impl From<SunValueC> for SunValue {
-    fn from(value: SunValueC) -> Self {
-        match value._type {
-            SunValueType::SunNil => SunValue::from(()),
-            SunValueType::SunBoolean => unsafe { SunValue::Boolean(value.data.boolean) },
-            SunValueType::SunNumber => unsafe { SunValue::Number(value.data.number) },
-            SunValueType::SunString => SunValue::String(unsafe {
-                CStr::from_ptr(value.data.string)
-                    .to_string_lossy()
-                    .into_owned()
-                    .into_bytes()
-            }),
-            SunValueType::SunTable => {
-                SunValue::from(Table::from(unsafe { (*value.data.table).clone() }))
-            }
-            SunValueType::SunFunction => {
-                SunValue::from(Function::from(unsafe { (*value.data.function).clone() }))
-            }
-            SunValueType::SunClass => {
-                SunValue::from(Class::from(unsafe { (*value.data.class).clone() }))
-            }
-        }
-    }
-}
+// impl From<SunValueC> for SunValue {
+//     fn from(value: SunValueC) -> Self {
+//         match value._type {
+//             SunValueType::SunNil => SunValue::from(()),
+//             SunValueType::SunBoolean => unsafe { SunValue::Boolean(value.data.boolean) },
+//             SunValueType::SunNumber => unsafe { SunValue::Number(value.data.number) },
+//             SunValueType::SunString => SunValue::String(unsafe {
+//                 CStr::from_ptr(value.data.string)
+//                     .to_string_lossy()
+//                     .into_owned()
+//                     .into_bytes()
+//             }),
+//             SunValueType::SunTable => {
+//                 SunValue::from(Table::from(unsafe { (*value.data.table).clone() }))
+//             }
+//             SunValueType::SunFunction => {
+//                 SunValue::from(Function::from(unsafe { (*value.data.function).clone() }))
+//             }
+//             SunValueType::SunClass => {
+//                 SunValue::from(Class::from(unsafe { (*value.data.class).clone() }))
+//             }
+//         }
+//     }
+// }
 
 impl fmt::Display for SunValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
