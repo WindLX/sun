@@ -1,7 +1,4 @@
-pub mod class;
-pub mod methods;
-
-use crate::{class::Complex, methods::base::abs};
+use crate::math::meta::{base::abs, complex::complex};
 use sun_core::{
     add_methods,
     meta::{OwnSunMeta, SunBase, SunMeta},
@@ -16,7 +13,7 @@ impl Math {
     pub fn new() -> Self {
         let mut class = SunClass::new("Math", SunBase::Object);
         let meta = class.get_meta_mut();
-        add_methods!(meta, ("abs", abs));
+        add_methods!(meta, ("abs", abs), ("cpx", complex));
         Math { meta: meta.clone() }
     }
 }
@@ -30,5 +27,3 @@ impl OwnSunMeta for Math {
         &mut self.meta
     }
 }
-
-fn main() {}
