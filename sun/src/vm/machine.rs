@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use sun_core::{
     container::{Function, SunValue, Table},
-    meta::SunMeta,
+    meta::{SunBase, SunMeta},
     utils::{
         log::{debug_output, error_output, log_output, warn_output},
         machine::IsMachine,
@@ -70,48 +70,26 @@ impl<'a> VirtualMachine<'a> {
                         match self_value.clone() {
                             Some(p) => {
                                 let value = p.get();
-                                let value_name = value.get_name();
-                                match self.meta_map.get(value_name) {
-                                    Some(obj) => match self.stack.pop() {
-                                        Some(p) => {
-                                            let method_string = p.get();
-                                            if let method_name @ SunValue::String(_) = method_string
-                                            {
-                                                match obj
-                                                    .get_method((&method_name).to_string().as_str())
-                                                {
-                                                    Some(method) => {
-                                                        self.stack.push(self_value.unwrap());
-                                                        self.stack.push(SunPointer::new(
-                                                            SunValue::from(method),
-                                                        ));
-                                                    }
-                                                    None => {
-                                                        let e = SunError::AttributeError(format!(
-                                                            "failed to find attribute `{}` for type `{}`",
-                                                            method_name, value_name
-                                                        ));
-                                                        error_output(e);
-                                                    }
-                                                }
-                                            } else {
-                                                let e = SunError::ParaError(format!(
-                                                    "need attribute name but got `{}`",
-                                                    method_string
-                                                ));
-                                                error_output(e);
-                                            }
+                                let meta_name = value.get_name();
+                                match self.stack.pop() {
+                                    Some(method_name) => match method_name.get() {
+                                        ref method_name @ SunValue::String(_) => {
+                                            let method_name: String = method_name.into();
+                                            let method =
+                                                self.get_method(meta_name, method_name.as_str());
+                                            self.stack.push(self_value.unwrap());
+                                            self.stack.push(SunPointer::new(SunValue::from(method)))
                                         }
-                                        None => {
-                                            let e = SunError::RunError(format!(
-                                                "stack is empty so failed to find attribute"
+                                        other => {
+                                            let e = SunError::ParaError(format!(
+                                                "expect attribute name but got `{other}`"
                                             ));
                                             error_output(e);
                                         }
                                     },
                                     None => {
-                                        let e = SunError::TypeError(format!(
-                                            "`{value_name}` is not a valid sun type"
+                                        let e = SunError::RunError(format!(
+                                            "stack is empty so failed to find object"
                                         ));
                                         error_output(e);
                                     }
@@ -128,27 +106,9 @@ impl<'a> VirtualMachine<'a> {
                         match self.stack.last() {
                             Some(p) => {
                                 let value = p.get();
-                                let value_name = value.get_name();
-                                match self.meta_map.get(value_name) {
-                                    Some(obj) => match obj.get_method(name) {
-                                        Some(method) => {
-                                            self.stack.push(SunPointer::new(SunValue::from(method)))
-                                        }
-                                        None => {
-                                            let e = SunError::AttributeError(format!(
-                                                "failed to find attribute `{}` for type `{}`",
-                                                name, value_name
-                                            ));
-                                            error_output(e);
-                                        }
-                                    },
-                                    None => {
-                                        let e = SunError::TypeError(format!(
-                                            "`{value_name}` is not a valid sun type"
-                                        ));
-                                        error_output(e);
-                                    }
-                                }
+                                let meta_name = value.get_name();
+                                let method = self.get_method(meta_name, name);
+                                self.stack.push(SunPointer::new(SunValue::from(method)));
                             }
                             None => {
                                 let e = SunError::RunError(format!(
@@ -159,11 +119,20 @@ impl<'a> VirtualMachine<'a> {
                         }
                     }
                 }
+                Command::LoadMetamethod(meta_name, method_name) => {
+                    let method = self.get_method(meta_name, method_name);
+                    self.stack.push(SunPointer::new(SunValue::from(method)));
+                }
                 Command::StoreGlobal(name) => {
                     match self.stack.pop() {
-                        Some(value) => {
-                            self.value_map.insert(name.to_string(), value);
-                        }
+                        Some(value) => match value.get() {
+                            SunValue::Nil => {
+                                warn_output("Nil value will not be insert into global value map")
+                            }
+                            _ => {
+                                self.value_map.insert(name.to_string(), value);
+                            }
+                        },
                         None => warn_output("Nil value will not be insert into global value map"),
                     };
                 }
@@ -326,7 +295,31 @@ impl<'a> VirtualMachine<'a> {
         }
     }
 
-    pub fn include(&mut self, lib_name: &str) {
+    /// 递归查找基类的方法
+    fn get_method(&self, meta_name: &str, method_name: &str) -> Function {
+        match self.meta_map.get(meta_name) {
+            Some(meta) => match meta.get_method(method_name) {
+                Some(method) => method,
+                None => match meta.get_base() {
+                    &SunBase::None => {
+                        let e = SunError::AttributeError(format!(
+                            "failed to find attribute `{}` for type `{}`",
+                            method_name, meta_name
+                        ));
+                        error_output(e);
+                    }
+                    &SunBase::Object => self.get_method("Object", method_name),
+                    &SunBase::Other(ref c) => self.get_method(c, method_name),
+                },
+            },
+            None => {
+                let e = SunError::TypeError(format!("`{meta_name}` is not a valid sun type"));
+                error_output(e);
+            }
+        }
+    }
+
+    fn include(&mut self, lib_name: &str) {
         dbg!(lib_name);
     }
 }

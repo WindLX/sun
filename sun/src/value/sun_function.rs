@@ -10,7 +10,7 @@ pub struct SunFunction {
 impl SunFunction {
     /// 创建新的 Function 元数据
     pub fn new() -> Self {
-        let meta = SunMeta::new("function", SunBase::Object);
+        let meta = SunMeta::new("Function", SunBase::Object);
         SunFunction { meta }
     }
 }

@@ -55,11 +55,12 @@ pub enum Token {
     SquL,
     SquR,
 
-    // . , : ;
+    // . , : ; ::
     Dot,
     Comma,
     Colon,
     Semi,
+    DoubleColon,
 
     // constants value
     Number(f64),

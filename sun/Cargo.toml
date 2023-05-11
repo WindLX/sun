@@ -1,6 +1,6 @@
 [package]
 name = "sun"
-version = "0.4.1"
+version = "0.5.0"
 author = "windlx"
 edition = "2021"
 
@@ -8,4 +8,5 @@ edition = "2021"
 
 [dependencies]
 sun_core = { path = "../sun_core" }
+sun_lib = { path = "../sun_lib" }
 colorized = "1.0.0"

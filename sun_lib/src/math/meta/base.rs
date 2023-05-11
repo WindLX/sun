@@ -6,7 +6,7 @@ use sun_core::{
 /// 计算绝对值
 pub fn abs() -> Function {
     let f = |args: Vec<SunPointer>| {
-        if args.len() <= 1 {
+        if args.len() < 1 {
             {
                 let e = SunError::ParaError(format!("the number of parameters is too few"));
                 error_output(e);

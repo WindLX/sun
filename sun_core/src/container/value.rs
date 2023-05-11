@@ -21,12 +21,12 @@ pub enum SunValue {
 impl SunValue {
     pub fn get_name(&self) -> &str {
         match self {
-            SunValue::Nil => "nil",
-            SunValue::Boolean(_) => "bool",
-            SunValue::Number(_) => "number",
-            SunValue::String(_) => "string",
-            SunValue::Table(_) => "table",
-            SunValue::Function(_) => "function",
+            SunValue::Nil => "Nil",
+            SunValue::Boolean(_) => "Bool",
+            SunValue::Number(_) => "Number",
+            SunValue::String(_) => "String",
+            SunValue::Table(_) => "Table",
+            SunValue::Function(_) => "Function",
             SunValue::Class(c) => c.get_name(),
         }
     }
@@ -132,31 +132,6 @@ impl From<Class> for SunValue {
     }
 }
 
-// impl From<SunValueC> for SunValue {
-//     fn from(value: SunValueC) -> Self {
-//         match value._type {
-//             SunValueType::SunNil => SunValue::from(()),
-//             SunValueType::SunBoolean => unsafe { SunValue::Boolean(value.data.boolean) },
-//             SunValueType::SunNumber => unsafe { SunValue::Number(value.data.number) },
-//             SunValueType::SunString => SunValue::String(unsafe {
-//                 CStr::from_ptr(value.data.string)
-//                     .to_string_lossy()
-//                     .into_owned()
-//                     .into_bytes()
-//             }),
-//             SunValueType::SunTable => {
-//                 SunValue::from(Table::from(unsafe { (*value.data.table).clone() }))
-//             }
-//             SunValueType::SunFunction => {
-//                 SunValue::from(Function::from(unsafe { (*value.data.function).clone() }))
-//             }
-//             SunValueType::SunClass => {
-//                 SunValue::from(Class::from(unsafe { (*value.data.class).clone() }))
-//             }
-//         }
-//     }
-// }
-
 impl fmt::Display for SunValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -172,7 +147,7 @@ impl fmt::Display for SunValue {
             }
             SunValue::Table(t) => write!(f, "{}", t),
             SunValue::Function(p) => write!(f, "{}", p),
-            SunValue::Class(c) => write!(f, "<class: {}>", c.get_name()),
+            SunValue::Class(c) => write!(f, "{}", c),
         }
     }
 }

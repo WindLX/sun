@@ -1,8 +1,10 @@
 use crate::utils::SunPointer;
+use colorized::*;
 use std::collections::HashMap;
+use std::fmt;
 
 /// `Class` 类型的数据容器
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Class {
     name: String,
     attributes: HashMap<String, SunPointer>,
@@ -38,20 +40,30 @@ impl Class {
     }
 }
 
-// impl From<ClassC> for Class {
-//     fn from(value: ClassC) -> Self {
-//         let name = unsafe { CStr::from_ptr(value.name).to_string_lossy().into_owned() };
-//         let name: &'static str = Box::leak(name.into_boxed_str());
-//         let mut attr = HashMap::new();
-//         for j in 0..value.attr_len {
-//             let p = unsafe { &*value.attributes.offset(j as isize) };
-//             let v = unsafe { &*(*(*p).pointer).data };
-//             let k = unsafe { CStr::from_ptr((*p).key).to_string_lossy().into_owned() };
-//             attr.insert(k, SunPointer::new(v.clone().into()));
-//         }
-//         Class {
-//             name,
-//             attributes: attr,
-//         }
-//     }
-// }
+pub trait IsSunClass {
+    fn get_class(&self) -> &Class;
+}
+
+impl fmt::Display for Class {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f)?;
+        let str = format!("{}:", self.name).color(Colors::YellowFg);
+        writeln!(f, "{}", str)?;
+        for (key, value) in self.attributes.iter() {
+            write!(f, "{:<10} {:<10?}\n", key, value)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Class {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f)?;
+        let str = format!("{}:", self.name).color(Colors::YellowFg);
+        writeln!(f, "{}:", str)?;
+        for (key, value) in self.attributes.iter() {
+            write!(f, "{:<10} {:<10?}\n", key, value)?;
+        }
+        Ok(())
+    }
+}

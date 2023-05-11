@@ -13,9 +13,10 @@ use sun_core::{
     utils::{
         log::{error_output, log_output, warn_output},
         object::_type,
-        IsMachine, SunError, SunPointer,
+        IsMachine, SunError, SunObject, SunPointer,
     },
 };
+use sun_lib::math::Math;
 
 /// 预导入
 pub fn prelude(
@@ -24,11 +25,13 @@ pub fn prelude(
 ) {
     add_metas!(
         meta_map,
-        ("nil", SunNil),
-        ("bool", SunBoolean),
-        ("number", SunNumber),
-        ("table", SunTable),
-        ("function", SunFunction)
+        ("Object", SunObject),
+        ("Nil", SunNil),
+        ("Bool", SunBoolean),
+        ("Number", SunNumber),
+        ("Table", SunTable),
+        ("Function", SunFunction),
+        ("Math", Math)
     );
     add_prelude_methods!(value_map, print, exit);
     add_prelude_sys_methods!(value_map, drop, show);

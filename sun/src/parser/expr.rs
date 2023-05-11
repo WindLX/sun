@@ -43,6 +43,8 @@ pub enum Expr {
     // Class(String, Option<Vec<String>>, Option<Vec<Box<Expr>>>),
     // import
     Import(String),
+    // MetaCall
+    MetaCall(String, String),
 }
 
 /// 语法树处理中间层
@@ -68,6 +70,7 @@ pub enum Desc {
     LoopEnd,
     // DefFunction(String, Option<Vec<String>>, usize),
     Import(String),
+    MetaCall(String, String),
 }
 
 /// 将语法树翻译成虚拟机指令
@@ -126,6 +129,10 @@ pub fn trans(ast: Box<Expr>, check: bool) -> Vec<Command> {
                 commands.push(Command::Back(loop_pos));
             }
             Desc::Import(name) => commands.push(Command::Import(name.clone())),
+            Desc::MetaCall(name, method) => commands.push(Command::LoadMetamethod(
+                name.to_string(),
+                method.to_string(),
+            )),
         }
     }
     if check == true {
@@ -304,6 +311,9 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             expr_stack.push(Desc::LoopEnd);
         }
         Expr::Import(name) => expr_stack.push(Desc::Import(name.clone())),
+        Expr::MetaCall(name, method) => {
+            expr_stack.push(Desc::MetaCall(name.clone(), method.clone()))
+        }
         // Expr::DefFunction(name, args) => {
         //     for arg in args.iter().rev() {
         //         traverse_expr(expr_stack, arg);

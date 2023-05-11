@@ -18,7 +18,7 @@ pub struct SunBoolean {
 impl SunBoolean {
     /// 创建新的 Bool 元数据
     pub fn new() -> SunBoolean {
-        let mut meta = SunMeta::new("bool", SunBase::Object);
+        let mut meta = SunMeta::new("Bool", SunBase::Object);
         add_meta_methods!(
             meta,
             SunBoolean,

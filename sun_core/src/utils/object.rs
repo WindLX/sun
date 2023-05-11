@@ -17,7 +17,7 @@ pub struct SunObject {
 impl SunObject {
     /// 新建新的 `Object` 元数据
     pub fn new() -> SunObject {
-        let mut meta = SunMeta::new("object", SunBase::Object);
+        let mut meta = SunMeta::new("Object", SunBase::None);
         add_methods!(meta, ("type", _type), ("clone", clone), ("meta", get_meta));
         SunObject { meta }
     }

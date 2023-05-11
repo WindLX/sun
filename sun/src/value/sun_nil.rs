@@ -30,7 +30,7 @@ impl OwnSunMeta for SunNil {
 impl SunNil {
     /// 创建新的 Nil 元数据
     pub fn new() -> SunNil {
-        let mut meta = SunMeta::new("nil", SunBase::Object);
+        let mut meta = SunMeta::new("Nil", SunBase::Object);
         add_meta_methods!(
             meta,
             SunNil,

@@ -375,9 +375,31 @@ impl<T: Read> ParseProto<T> {
         match self.tokenizer.peek() {
             &Token::Clone => {
                 self.tokenizer.next();
-                Box::new(Expr::Clone(self.parse_8()))
+                Box::new(Expr::Clone(self.parse_metacall()))
             }
-            _ => self.parse_8(),
+            _ => self.parse_metacall(),
+        }
+    }
+
+    /// metacall
+    fn parse_metacall(&mut self) -> Box<Expr> {
+        let name = self.parse_8();
+        match self.tokenizer.peek() {
+            &Token::DoubleColon => {
+                self.tokenizer.next();
+                let method = self.parse_8();
+                match (*name, *method) {
+                    (Expr::Variable(n), Expr::Variable(m)) => Box::new(Expr::MetaCall(n, m)),
+                    _ => {
+                        let e = SunError::CallError(format!(
+                            "invalid meta call statement at line {}",
+                            self.tokenizer.line()
+                        ));
+                        error_output(e)
+                    }
+                }
+            }
+            _ => name,
         }
     }
 

@@ -34,7 +34,7 @@ impl OwnSunMeta for SunNumber {
 impl SunNumber {
     /// 创建新的 Number 元数据
     pub fn new() -> SunNumber {
-        let mut meta = SunMeta::new("number", SunBase::Object);
+        let mut meta = SunMeta::new("Number", SunBase::Object);
         add_meta_methods!(
             meta,
             SunNumber,

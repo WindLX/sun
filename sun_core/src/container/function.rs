@@ -20,19 +20,6 @@ impl From<SysFunction> for Function {
     }
 }
 
-// impl From<FunctionC> for Function {
-//     fn from(value: FunctionC) -> Self {
-//         match value._type {
-//             FunctionType::RustFunction => {
-//                 Function::from(unsafe { *(value.data.rust_function as *const RustFunction) })
-//             }
-//             FunctionType::SysFunction => {
-//                 Function::from(unsafe { *(value.data.sys_function as *const SysFunction) })
-//             }
-//         }
-//     }
-// }
-
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "function")
@@ -41,7 +28,7 @@ impl fmt::Display for Function {
 
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "")
+        write!(f, "function")
     }
 }
 

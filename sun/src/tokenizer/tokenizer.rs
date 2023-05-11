@@ -271,7 +271,7 @@ impl<R: Read> Tokenizer<R> {
                 },
                 b'=' => self.read_2char(b'=', Token::Eq, Token::Assign),
                 b'~' => self.read_2char(b'=', Token::NotEq, Token::Not),
-                b':' => Ok(Token::Colon),
+                b':' => self.read_2char(b':', Token::DoubleColon, Token::Colon),
                 b'<' => self.read_2char(b'=', Token::Le, Token::Less),
                 b'>' => self.read_2char(b'=', Token::Ge, Token::Greater),
                 b'.' => match self.peek_byte() {

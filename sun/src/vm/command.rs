@@ -73,4 +73,11 @@ pub enum Command {
         + `lib_name`: `String` 模块的地址
     */
     Import(String),
+
+    /*
+        元调用
+        + `meta_name`: `String` 类型名称
+        + `method_name`: `String` 方法名
+    */
+    LoadMetamethod(String, String),
 }

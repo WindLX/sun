@@ -28,7 +28,7 @@ impl OwnSunMeta for SunTable {
 impl SunTable {
     /// 新建 `Table` 元数据
     pub fn new() -> SunTable {
-        let mut meta = SunMeta::new("table", SunBase::Object);
+        let mut meta = SunMeta::new("Table", SunBase::Object);
         add_meta_methods!(meta, SunTable, ("index", index));
         add_methods!(
             meta,

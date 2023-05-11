@@ -6,6 +6,7 @@ use std::collections::HashMap;
 pub enum SunBase {
     Other(String),
     Object,
+    None,
 }
 
 /// Sun 的元信息，定义类型的元数据和应当拥有的行为
