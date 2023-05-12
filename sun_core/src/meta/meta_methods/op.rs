@@ -104,19 +104,26 @@ where
     fn xor() -> Function;
 }
 
+/// 是否可相等
+pub trait EqualAble
+where
+    Self: OwnSunMeta,
+{
+    /// `==`
+    fn eq() -> Function;
+    /// `~=`
+    fn noteq() -> Function;
+}
+
 /// 是否可比较
 pub trait CompareAble
 where
-    Self: OwnSunMeta,
+    Self: EqualAble,
 {
     /// `<`
     fn less() -> Function;
     /// `>`
     fn greater() -> Function;
-    /// `==`
-    fn eq() -> Function;
-    /// `~=`
-    fn noteq() -> Function;
     /// `>=`
     fn ge() -> Function;
     /// `<=`

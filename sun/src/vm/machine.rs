@@ -348,7 +348,7 @@ impl<'a> IsMachine for VirtualMachine<'a> {
             .filter(|(_, p)| p.get().get_name() != "function")
             .map(|(name, value)| format!("{name}: {value:?}"))
             .collect::<Vec<String>>()
-            .join(", ");
+            .join(",\n");
         log_output(variables)
     }
 }

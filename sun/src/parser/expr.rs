@@ -4,15 +4,16 @@ use sun_core::{container::SunValue, utils::log::debug_output};
 /// 语法树节点
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Add(Box<Expr>, Box<Expr>),   // 0
-    Sub(Box<Expr>, Box<Expr>),   // 0
-    Mul(Box<Expr>, Box<Expr>),   // 1
-    Div(Box<Expr>, Box<Expr>),   // 1
-    Rem(Box<Expr>, Box<Expr>),   // 1
-    Pow(Box<Expr>, Box<Expr>),   // 2
-    Neg(Box<Expr>),              // 3
-    Fac(Box<Expr>),              // 4
-    Conj(Box<Expr>),             // 4
+    Add(Box<Expr>, Box<Expr>), // 0
+    Sub(Box<Expr>, Box<Expr>), // 0
+    Mul(Box<Expr>, Box<Expr>), // 1
+    Div(Box<Expr>, Box<Expr>), // 1
+    Rem(Box<Expr>, Box<Expr>), // 1
+    Pow(Box<Expr>, Box<Expr>), // 2
+    Neg(Box<Expr>),            // 3
+    Fac(Box<Expr>),            // 4
+    Conj(Box<Expr>),           // 4
+    To(Box<Expr>),
     And(Box<Expr>, Box<Expr>),   // 0
     Or(Box<Expr>, Box<Expr>),    // 0
     Not(Box<Expr>),              // 3
@@ -219,6 +220,10 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             traverse_expr(expr_stack, &left);
             expr_stack.push(Desc::Single("clone".to_string()));
         }
+        Expr::To(left) => {
+            traverse_expr(expr_stack, &left);
+            expr_stack.push(Desc::Single("to".to_string()));
+        }
         Expr::Eq(left, right) => {
             traverse_expr(expr_stack, right);
             traverse_expr(expr_stack, left);
@@ -313,14 +318,13 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
         Expr::Import(name) => expr_stack.push(Desc::Import(name.clone())),
         Expr::MetaCall(name, method) => {
             expr_stack.push(Desc::MetaCall(name.clone(), method.clone()))
-        }
-        // Expr::DefFunction(name, args) => {
-        //     for arg in args.iter().rev() {
-        //         traverse_expr(expr_stack, arg);
-        //     }
-        //     traverse_expr(expr_stack, name);
-        //     expr_stack.push(Desc::Call(args.len()));
-        // }
+        } // Expr::DefFunction(name, args) => {
+          //     for arg in args.iter().rev() {
+          //         traverse_expr(expr_stack, arg);
+          //     }
+          //     traverse_expr(expr_stack, name);
+          //     expr_stack.push(Desc::Call(args.len()));
+          // }
     }
 }
 

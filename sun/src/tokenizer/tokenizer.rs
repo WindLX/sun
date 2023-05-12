@@ -82,6 +82,35 @@ impl<R: Read> Tokenizer<R> {
     }
 
     /**
+        获取两种长度为两个或一个字符的 `Token`
+        + `para`:
+            + `next_char_1`: `u8` 第一种期望的下一个字符
+            + `next_char_2`: `u8` 第二种期望的下一个字符
+            + `long_1`: `Token` 第一种期望的长度为2的Token
+            + `long_2`: `Token` 第二种期望的长度为2的Token
+            + `short_token`: `Token` 期望的长度为1的Token
+        + `return`:
+            + `Token`
+    */
+    fn read_2longchar(
+        &mut self,
+        next_char_1: u8,
+        next_char_2: u8,
+        long_1: Token,
+        long_2: Token,
+        short_token: Token,
+    ) -> Result<Token, SunError> {
+        if self.peek_byte()? == next_char_1 {
+            self.read_byte();
+            Ok(long_1)
+        } else if self.peek_byte()? == next_char_2 {
+            self.read_byte();
+            Ok(long_2)
+        } else {
+            Ok(short_token)
+        }
+    }
+    /**
         获取下一个变量名或者是否为 Sun 的保留字
         + `para`:
             + `first`: `u8` 第一个字符
@@ -273,7 +302,7 @@ impl<R: Read> Tokenizer<R> {
                 b'~' => self.read_2char(b'=', Token::NotEq, Token::Not),
                 b':' => self.read_2char(b':', Token::DoubleColon, Token::Colon),
                 b'<' => self.read_2char(b'=', Token::Le, Token::Less),
-                b'>' => self.read_2char(b'=', Token::Ge, Token::Greater),
+                b'>' => self.read_2longchar(b'=', b'>', Token::Ge, Token::To, Token::Greater),
                 b'.' => match self.peek_byte() {
                     Ok(b'0'..=b'9') => self.read_number_fraction(0),
                     Ok(_) => Ok(Token::Dot),

@@ -370,12 +370,16 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    /// clone
+    /// clone to
     fn parse_7(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Clone => {
                 self.tokenizer.next();
                 Box::new(Expr::Clone(self.parse_metacall()))
+            }
+            &Token::To => {
+                self.tokenizer.next();
+                Box::new(Expr::To(self.parse_metacall()))
             }
             _ => self.parse_metacall(),
         }

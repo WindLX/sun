@@ -7,8 +7,9 @@ pub enum Token {
     False,
     Return,
 
-    // '
+    // ' >>
     Clone,
+    To,
 
     // ? ?? |
     If,

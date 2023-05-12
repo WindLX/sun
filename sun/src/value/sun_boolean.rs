@@ -3,7 +3,7 @@ use sun_core::{
     add_meta_methods,
     container::{Function, RustFunction, SunValue},
     meta::{
-        meta_methods::op::{AndAble, CompareAble, NotAble, OrAble, XorAble},
+        meta_methods::op::{AndAble, CompareAble, EqualAble, NotAble, OrAble, XorAble},
         OwnSunMeta, SunBase, SunMeta,
     },
     utils::SunPointer,
@@ -85,11 +85,17 @@ impl XorAble for SunBoolean {
     }
 }
 
-impl CompareAble for SunBoolean {
+impl EqualAble for SunBoolean {
     fn eq() -> Function {
         compare_op_b!(==)
     }
 
+    fn noteq() -> Function {
+        compare_op_b!(!=)
+    }
+}
+
+impl CompareAble for SunBoolean {
     fn ge() -> Function {
         compare_op_b!(>=)
     }
@@ -104,10 +110,6 @@ impl CompareAble for SunBoolean {
 
     fn less() -> Function {
         compare_op_b!(<)
-    }
-
-    fn noteq() -> Function {
-        compare_op_b!(!=)
     }
 }
 

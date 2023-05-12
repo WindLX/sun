@@ -3,8 +3,8 @@ use sun_core::{
     container::{Function, RustFunction, SunValue},
     meta::{
         meta_methods::op::{
-            AddAble, AndAble, CompareAble, ConjAble, DivAble, FacAble, MulAble, NegAble, NotAble,
-            OrAble, PowAble, RemAble, SubAble, XorAble,
+            AddAble, AndAble, CompareAble, ConjAble, DivAble, EqualAble, FacAble, MulAble, NegAble,
+            NotAble, OrAble, PowAble, RemAble, SubAble, XorAble,
         },
         OwnSunMeta, SunBase, SunMeta,
     },
@@ -145,11 +145,17 @@ impl NotAble for SunNil {
     }
 }
 
-impl CompareAble for SunNil {
+impl EqualAble for SunNil {
     fn eq() -> Function {
         nil_compare!()
     }
 
+    fn noteq() -> Function {
+        nil_compare!()
+    }
+}
+
+impl CompareAble for SunNil {
     fn ge() -> Function {
         nil_compare!()
     }
@@ -163,10 +169,6 @@ impl CompareAble for SunNil {
     }
 
     fn less() -> Function {
-        nil_compare!()
-    }
-
-    fn noteq() -> Function {
         nil_compare!()
     }
 }

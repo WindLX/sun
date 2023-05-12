@@ -1,5 +1,6 @@
 mod base;
 mod complex;
-pub mod math;
+mod math;
 
-pub use math::Math;
+pub use complex::ComplexMeta;
+pub use math::MathMeta;

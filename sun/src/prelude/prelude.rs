@@ -16,7 +16,7 @@ use sun_core::{
         IsMachine, SunError, SunObject, SunPointer,
     },
 };
-use sun_lib::math::Math;
+use sun_lib::math::{ComplexMeta, MathMeta};
 
 /// 预导入
 pub fn prelude(
@@ -31,7 +31,8 @@ pub fn prelude(
         ("Number", SunNumber),
         ("Table", SunTable),
         ("Function", SunFunction),
-        ("Math", Math)
+        ("Math", MathMeta),
+        ("Complex", ComplexMeta)
     );
     add_prelude_methods!(value_map, print, exit);
     add_prelude_sys_methods!(value_map, drop, show);

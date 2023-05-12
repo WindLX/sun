@@ -5,7 +5,8 @@ use sun_core::{
     container::{Function, RustFunction, SunValue},
     meta::{
         meta_methods::op::{
-            AddAble, CompareAble, DivAble, FacAble, MulAble, NegAble, PowAble, RemAble, SubAble,
+            AddAble, CompareAble, DivAble, EqualAble, FacAble, MulAble, NegAble, PowAble, RemAble,
+            SubAble,
         },
         OwnSunMeta, SunBase, SunMeta,
     },
@@ -182,11 +183,17 @@ impl FacAble for SunNumber {
     }
 }
 
-impl CompareAble for SunNumber {
+impl EqualAble for SunNumber {
     fn eq() -> Function {
         compare_op!(==)
     }
 
+    fn noteq() -> Function {
+        compare_op!(!=)
+    }
+}
+
+impl CompareAble for SunNumber {
     fn ge() -> Function {
         compare_op!(>=)
     }
@@ -201,10 +208,6 @@ impl CompareAble for SunNumber {
 
     fn less() -> Function {
         compare_op!(<)
-    }
-
-    fn noteq() -> Function {
-        compare_op!(!=)
     }
 }
 
