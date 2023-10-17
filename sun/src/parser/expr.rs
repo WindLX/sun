@@ -4,23 +4,18 @@ use sun_core::{container::SunValue, utils::log::debug_output};
 /// 语法树节点
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Add(Box<Expr>, Box<Expr>), // 0
-    Sub(Box<Expr>, Box<Expr>), // 0
-    Mul(Box<Expr>, Box<Expr>), // 1
-    Div(Box<Expr>, Box<Expr>), // 1
-    Rem(Box<Expr>, Box<Expr>), // 1
-    Pow(Box<Expr>, Box<Expr>), // 2
-    Neg(Box<Expr>),            // 3
-    Fac(Box<Expr>),            // 4
-    Conj(Box<Expr>),           // 4
-    To(Box<Expr>),
+    Add(Box<Expr>, Box<Expr>),   // 0
+    Sub(Box<Expr>, Box<Expr>),   // 0
+    Mul(Box<Expr>, Box<Expr>),   // 1
+    Div(Box<Expr>, Box<Expr>),   // 1
+    Rem(Box<Expr>, Box<Expr>),   // 1
+    Neg(Box<Expr>),              // 3
     And(Box<Expr>, Box<Expr>),   // 0
     Or(Box<Expr>, Box<Expr>),    // 0
     Not(Box<Expr>),              // 3
     Xor(Box<Expr>, Box<Expr>),   // 0
     Dot(Box<Expr>, Box<Expr>),   // 6
     Index(Box<Expr>, Box<Expr>), // 6
-    Clone(Box<Expr>),
     Assign(String, Box<Expr>),
     TableAssign(Box<Expr>, Box<Expr>),
     TableCreate(Vec<Box<Expr>>),
@@ -170,11 +165,6 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
             traverse_expr(expr_stack, left);
             expr_stack.push(Desc::Double("rem".to_string()));
         }
-        Expr::Pow(left, right) => {
-            traverse_expr(expr_stack, right);
-            traverse_expr(expr_stack, left);
-            expr_stack.push(Desc::Double("pow".to_string()));
-        }
         Expr::And(left, right) => {
             traverse_expr(expr_stack, right);
             traverse_expr(expr_stack, left);
@@ -207,22 +197,6 @@ fn traverse_expr(expr_stack: &mut Vec<Desc>, expr: &Expr) {
         Expr::Not(left) => {
             traverse_expr(expr_stack, left);
             expr_stack.push(Desc::Single("not".to_string()));
-        }
-        Expr::Fac(left) => {
-            traverse_expr(expr_stack, left);
-            expr_stack.push(Desc::Single("fac".to_string()));
-        }
-        Expr::Conj(left) => {
-            traverse_expr(expr_stack, left);
-            expr_stack.push(Desc::Single("conj".to_string()));
-        }
-        Expr::Clone(left) => {
-            traverse_expr(expr_stack, &left);
-            expr_stack.push(Desc::Single("clone".to_string()));
-        }
-        Expr::To(left) => {
-            traverse_expr(expr_stack, &left);
-            expr_stack.push(Desc::Single("to".to_string()));
         }
         Expr::Eq(left, right) => {
             traverse_expr(expr_stack, right);

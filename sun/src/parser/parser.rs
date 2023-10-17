@@ -41,7 +41,7 @@ impl<T: Read> ParseProto<T> {
     /// 进行语法分析
     fn load(&mut self) {
         loop {
-            let ast = self.parse_chunk();
+            let ast = self.parse_block();
             if self.check {
                 debug_output(&ast, true);
             }
@@ -57,18 +57,43 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    /// 语句段：定义语段或语句块
-    fn parse_chunk(&mut self) -> Box<Expr> {
-        match self.tokenizer.peek() {
-            &Token::Import => self.parse_import(),
-            &Token::DefClass | &Token::DefFunction => self.parse_def(),
-            _ => self.parse_block(),
+    /// 语句段：定义语段
+    fn parse_chunk(&mut self) -> Vec<Box<Expr>> {
+        let mut blocks = Vec::new();
+        if matches!(self.tokenizer.peek(), Token::CurR) {
+            self.tokenizer.next();
+        } else {
+            blocks.push(self.parse_block());
+            loop {
+                match self.tokenizer.peek() {
+                    &Token::Semi => {
+                        self.tokenizer.next();
+                        blocks.push(self.parse_block());
+                        continue;
+                    }
+                    &Token::CurR => {
+                        self.tokenizer.next();
+                        break;
+                    }
+                    other => {
+                        let e = SunError::SymbolError(format!(
+                            "unexpected token `{:?}` at line {}",
+                            other.clone(),
+                            self.tokenizer.line()
+                        ));
+                        error_output(e)
+                    }
+                };
+            }
         }
+        blocks
     }
 
     /// 语句块：流程控制语段或表达式
     fn parse_block(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
+            &Token::Import => self.parse_import(),
+            &Token::DefFunction => self.parse_def(),
             &Token::If | &Token::Loop => self.parse_control(),
             _ => self.parse_expr(),
         }
@@ -91,7 +116,6 @@ impl<T: Read> ParseProto<T> {
     /// 定义语句
     fn parse_def(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
-            &Token::DefClass => self.parse_defclass(),
             &Token::DefFunction => self.parse_deffunc(),
             _ => unreachable!("parse def"),
         }
@@ -225,55 +249,24 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    /// pow
+    /// neg not
     fn parse_2(&mut self) -> Box<Expr> {
-        let mut left = self.parse_3();
-        loop {
-            match self.tokenizer.peek() {
-                &Token::Pow => {
-                    self.tokenizer.next();
-                    let right = self.parse_3();
-                    left = Box::new(Expr::Pow(left, right));
-                }
-                _ => break,
-            }
-        }
-        left
-    }
-
-    /// neg not conj
-    fn parse_3(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Sub => {
                 self.tokenizer.next();
-                Box::new(Expr::Neg(self.parse_3()))
+                Box::new(Expr::Neg(self.parse_2()))
             }
             &Token::Not => {
                 self.tokenizer.next();
-                Box::new(Expr::Not(self.parse_3()))
+                Box::new(Expr::Not(self.parse_2()))
             }
-            &Token::Mul => {
-                self.tokenizer.next();
-                Box::new(Expr::Conj(self.parse_3()))
-            }
-            _ => self.parse_4(),
-        }
-    }
-
-    /// fac
-    fn parse_4(&mut self) -> Box<Expr> {
-        match self.tokenizer.peek() {
-            &Token::Fac => {
-                self.tokenizer.next();
-                Box::new(Expr::Fac(self.parse_5()))
-            }
-            _ => self.parse_5(),
+            _ => self.parse_3(),
         }
     }
 
     /// function call and assign
-    fn parse_5(&mut self) -> Box<Expr> {
-        let name = self.parse_6();
+    fn parse_3(&mut self) -> Box<Expr> {
+        let name = self.parse_4();
         match self.tokenizer.peek() {
             &Token::ParL => {
                 let mut args = Vec::new();
@@ -312,8 +305,8 @@ impl<T: Read> ParseProto<T> {
     }
 
     /// dot index
-    fn parse_6(&mut self) -> Box<Expr> {
-        let mut left = self.parse_7();
+    fn parse_4(&mut self) -> Box<Expr> {
+        let mut left = self.parse_metacall();
         loop {
             match self.tokenizer.peek() {
                 &Token::Dot => {
@@ -370,28 +363,13 @@ impl<T: Read> ParseProto<T> {
         left
     }
 
-    /// clone to
-    fn parse_7(&mut self) -> Box<Expr> {
-        match self.tokenizer.peek() {
-            &Token::Clone => {
-                self.tokenizer.next();
-                Box::new(Expr::Clone(self.parse_metacall()))
-            }
-            &Token::To => {
-                self.tokenizer.next();
-                Box::new(Expr::To(self.parse_metacall()))
-            }
-            _ => self.parse_metacall(),
-        }
-    }
-
     /// metacall
     fn parse_metacall(&mut self) -> Box<Expr> {
-        let name = self.parse_8();
+        let name = self.parse_5();
         match self.tokenizer.peek() {
-            &Token::DoubleColon => {
+            &Token::Colon => {
                 self.tokenizer.next();
-                let method = self.parse_8();
+                let method = self.parse_5();
                 match (*name, *method) {
                     (Expr::Variable(n), Expr::Variable(m)) => Box::new(Expr::MetaCall(n, m)),
                     _ => {
@@ -408,7 +386,7 @@ impl<T: Read> ParseProto<T> {
     }
 
     /// name
-    fn parse_8(&mut self) -> Box<Expr> {
+    fn parse_5(&mut self) -> Box<Expr> {
         match self.tokenizer.peek() {
             &Token::Name(ref name) => {
                 let name = name.clone();
@@ -434,7 +412,7 @@ impl<T: Read> ParseProto<T> {
 
     /// key-value pair
     fn parse_pair(&mut self) -> Box<Expr> {
-        let left = self.parse_expr();
+        let left = self.parse_primary();
         match self.tokenizer.peek() {
             &Token::Colon => {
                 self.tokenizer.next();
@@ -465,40 +443,9 @@ impl<T: Read> ParseProto<T> {
         }
     }
 
-    /// def class
-    fn parse_defclass(&mut self) -> Box<Expr> {
-        match self.tokenizer.peek() {
-            &Token::DefClass => {
-                self.tokenizer.next();
-                todo!("def class")
-            }
-            _ => self.parse_expr(),
-        }
-    }
-
     /// def function
     fn parse_deffunc(&mut self) -> Box<Expr> {
-        match self.tokenizer.peek() {
-            &Token::DefClass => {
-                self.tokenizer.next();
-                match self.tokenizer.peek() {
-                    &Token::Name(ref name) => {
-                        let name = name.clone();
-                        self.tokenizer.next();
-                        Box::new(Expr::Variable(name))
-                    }
-                    other => {
-                        let e = SunError::SymbolError(format!(
-                            "unexpected token `{:?}` at line {}",
-                            other.clone(),
-                            self.tokenizer.line()
-                        ));
-                        error_output(e)
-                    }
-                }
-            }
-            _ => self.parse_0(),
-        }
+        self.parse_0()
     }
 
     /// if
@@ -506,34 +453,15 @@ impl<T: Read> ParseProto<T> {
         self.expect(Token::If);
         let mut cond = self.parse_logic_unassign();
         self.unexpect_assign(&mut cond);
-        self.expect(Token::Colon);
-        let mut thens = Vec::new();
-        if matches!(self.tokenizer.peek(), Token::End | Token::Else) {
-            self.tokenizer.next();
-        } else {
-            thens.push(self.parse_block());
-            while matches!(self.tokenizer.peek(), Token::Semi) {
-                self.tokenizer.next();
-                thens.push(self.parse_block());
-            }
-        }
+        self.expect(Token::CurL);
+        let thens = self.parse_chunk();
         let elses = if let &Token::Else = self.tokenizer.peek() {
             self.tokenizer.next();
-            let mut elses = Vec::new();
-            if matches!(self.tokenizer.peek(), Token::End) {
-                self.tokenizer.next();
-            } else {
-                elses.push(self.parse_block());
-                while matches!(self.tokenizer.peek(), Token::Semi) {
-                    self.tokenizer.next();
-                    elses.push(self.parse_block());
-                }
-            }
+            let elses = self.parse_chunk();
             Some(elses)
         } else {
             None
         };
-        self.expect(Token::End);
         Box::new(Expr::If(cond, thens, elses))
     }
 
@@ -542,18 +470,8 @@ impl<T: Read> ParseProto<T> {
         self.expect(Token::Loop);
         let mut cond = self.parse_logic_unassign();
         self.unexpect_assign(&mut cond);
-        self.expect(Token::Colon);
-        let mut bodys = Vec::new();
-        if matches!(self.tokenizer.peek(), Token::End) {
-            self.tokenizer.next();
-        } else {
-            bodys.push(self.parse_block());
-            while matches!(self.tokenizer.peek(), Token::Semi) {
-                self.tokenizer.next();
-                bodys.push(self.parse_block());
-            }
-        }
-        self.expect(Token::End);
+        self.expect(Token::CurL);
+        let bodys = self.parse_chunk();
         Box::new(Expr::Loop(cond, bodys))
     }
 

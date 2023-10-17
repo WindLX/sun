@@ -6,40 +6,34 @@ pub enum Token {
     True,
     False,
     Return,
+    Break,
+    Continue,
 
-    // ' >>
-    Clone,
-    To,
-
-    // ? ?? |
+    // if else
     If,
     Else,
-    End,
 
-    // $
+    // loop
     Loop,
 
-    // @ # ##
+    // @ fn
     Import,
     DefFunction,
-    DefClass,
 
-    // && || ~ ^^
+    // && || ! ^
     And,
     Or,
     Not,
     Xor,
 
-    // + - * / % ^ !
+    // + - * / %
     Add,
     Sub,
     Mul,
     Div,
     Mod,
-    Pow,
-    Fac,
 
-    // == ~= <= >= < > =
+    // == != <= >= < > =
     Eq,
     NotEq,
     Le,

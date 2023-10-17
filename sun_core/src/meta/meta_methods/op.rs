@@ -40,22 +40,6 @@ where
     fn rem() -> Function;
 }
 
-/// `^`
-pub trait PowAble
-where
-    Self: OwnSunMeta,
-{
-    fn pow() -> Function;
-}
-
-/// `!` 一元操作
-pub trait FacAble
-where
-    Self: OwnSunMeta,
-{
-    fn fac() -> Function;
-}
-
 /// `-` 一元操作
 pub trait NegAble
 where
@@ -88,7 +72,7 @@ where
     fn or() -> Function;
 }
 
-/// `~`
+/// `!`
 pub trait NotAble
 where
     Self: OwnSunMeta,
@@ -96,7 +80,7 @@ where
     fn not() -> Function;
 }
 
-/// `^^`
+/// `^`
 pub trait XorAble
 where
     Self: OwnSunMeta,
@@ -111,7 +95,7 @@ where
 {
     /// `==`
     fn eq() -> Function;
-    /// `~=`
+    /// `!=`
     fn noteq() -> Function;
 }
 

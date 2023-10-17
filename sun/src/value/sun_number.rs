@@ -5,15 +5,11 @@ use sun_core::{
     container::{Function, RustFunction, SunValue},
     meta::{
         meta_methods::op::{
-            AddAble, CompareAble, DivAble, EqualAble, FacAble, MulAble, NegAble, PowAble, RemAble,
-            SubAble,
+            AddAble, CompareAble, DivAble, EqualAble, MulAble, NegAble, RemAble, SubAble,
         },
         OwnSunMeta, SunBase, SunMeta,
     },
-    utils::{
-        log::{error_output, warn_output},
-        SunError, SunPointer,
-    },
+    utils::{log::warn_output, SunPointer},
 };
 
 /// Number 元数据
@@ -44,8 +40,6 @@ impl SunNumber {
             ("mul", mul),
             ("div", div),
             ("rem", rem),
-            ("pow", pow),
-            ("fac", fac),
             ("neg", neg),
             ("eq", eq),
             ("noteq", noteq),
@@ -131,6 +125,7 @@ impl NegAble for SunNumber {
     }
 }
 
+/*
 impl PowAble for SunNumber {
     fn pow() -> Function {
         let f = |args: Vec<SunPointer>| {
@@ -182,6 +177,7 @@ impl FacAble for SunNumber {
         Function::from(f as RustFunction)
     }
 }
+*/
 
 impl EqualAble for SunNumber {
     fn eq() -> Function {

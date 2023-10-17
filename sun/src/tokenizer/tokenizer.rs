@@ -82,35 +82,6 @@ impl<R: Read> Tokenizer<R> {
     }
 
     /**
-        获取两种长度为两个或一个字符的 `Token`
-        + `para`:
-            + `next_char_1`: `u8` 第一种期望的下一个字符
-            + `next_char_2`: `u8` 第二种期望的下一个字符
-            + `long_1`: `Token` 第一种期望的长度为2的Token
-            + `long_2`: `Token` 第二种期望的长度为2的Token
-            + `short_token`: `Token` 期望的长度为1的Token
-        + `return`:
-            + `Token`
-    */
-    fn read_2longchar(
-        &mut self,
-        next_char_1: u8,
-        next_char_2: u8,
-        long_1: Token,
-        long_2: Token,
-        short_token: Token,
-    ) -> Result<Token, SunError> {
-        if self.peek_byte()? == next_char_1 {
-            self.read_byte();
-            Ok(long_1)
-        } else if self.peek_byte()? == next_char_2 {
-            self.read_byte();
-            Ok(long_2)
-        } else {
-            Ok(short_token)
-        }
-    }
-    /**
         获取下一个变量名或者是否为 Sun 的保留字
         + `para`:
             + `first`: `u8` 第一个字符
@@ -136,9 +107,13 @@ impl<R: Read> Tokenizer<R> {
             "T" => Token::True,
             "false" => Token::False,
             "true" => Token::True,
-            "@" => Token::DefFunction,
-            "#" => Token::DefClass,
+            "fn" => Token::DefFunction,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "while" => Token::Loop,
             "nil" => Token::Nil,
+            "break" => Token::Break,
+            "continue" => Token::Continue,
             _ => Token::Name(s),
         };
         Ok(res)
@@ -273,10 +248,7 @@ impl<R: Read> Tokenizer<R> {
                 b'-' => self.read_2char(b'>', Token::Return, Token::Sub),
                 b'*' => Ok(Token::Mul),
                 b'%' => Ok(Token::Mod),
-                b'^' => self.read_2char(b'^', Token::Xor, Token::Pow),
-                b'?' => self.read_2char(b'?', Token::Else, Token::If),
-                b'|' => self.read_2char(b'|', Token::Or, Token::End),
-                b'$' => Ok(Token::Loop),
+                b'^' => Ok(Token::Xor),
                 b'@' => Ok(Token::Import),
                 b'(' => Ok(Token::ParL),
                 b')' => Ok(Token::ParR),
@@ -285,8 +257,18 @@ impl<R: Read> Tokenizer<R> {
                 b'[' => Ok(Token::SquL),
                 b']' => Ok(Token::SquR),
                 b',' => Ok(Token::Comma),
-                b'!' => Ok(Token::Fac),
                 b';' => Ok(Token::Semi),
+                b'|' => match self.peek_byte() {
+                    Ok(b'|') => {
+                        self.read_byte();
+                        Ok(Token::Or)
+                    }
+                    Ok(other) => Err(SunError::SymbolError(format!(
+                        "unexpected byte `{other}` at line {}",
+                        self.line()
+                    ))),
+                    Err(e) => Err(e),
+                },
                 b'&' => match self.peek_byte() {
                     Ok(b'&') => {
                         self.read_byte();
@@ -299,10 +281,10 @@ impl<R: Read> Tokenizer<R> {
                     Err(e) => Err(e),
                 },
                 b'=' => self.read_2char(b'=', Token::Eq, Token::Assign),
-                b'~' => self.read_2char(b'=', Token::NotEq, Token::Not),
+                b'!' => self.read_2char(b'=', Token::NotEq, Token::Not),
                 b':' => self.read_2char(b':', Token::DoubleColon, Token::Colon),
                 b'<' => self.read_2char(b'=', Token::Le, Token::Less),
-                b'>' => self.read_2longchar(b'=', b'>', Token::Ge, Token::To, Token::Greater),
+                b'>' => self.read_2char(b'=', Token::Ge, Token::Greater),
                 b'.' => match self.peek_byte() {
                     Ok(b'0'..=b'9') => self.read_number_fraction(0),
                     Ok(_) => Ok(Token::Dot),
@@ -317,7 +299,6 @@ impl<R: Read> Tokenizer<R> {
                     Ok(_) => Ok(Token::Div),
                     Err(e) => Err(e),
                 },
-                b'\'' => Ok(Token::Clone),
                 b'"' => self.read_string(ch),
                 b'0'..=b'9' => self.read_number(ch),
                 b'A'..=b'Z' | b'a'..=b'z' | b'_' => self.read_name(ch),
